@@ -1,7 +1,7 @@
 const nodemailer = require('nodemailer');
 require('dotenv').config();
 
-// 创建SMTP传输器
+// 创建SMTP服务
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST,
   port: process.env.SMTP_PORT,
@@ -16,16 +16,13 @@ const transporter = nodemailer.createTransport({
 const { pendingVerifications } = require('../middleware/rateLimiter');
 
 const sendVerificationEmail = async (email) => {
-  //生成数字验证码
   const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
   
-  // 存储验证码信息
   pendingVerifications.set(email, {
     code: verificationCode,
     timestamp: Date.now()
   });
 
-  // 邮件内容
   const mailOptions = {
     from: `"青智立方团队" <${process.env.SMTP_USER}>`,
     to: email,
@@ -61,11 +58,11 @@ const sendVerificationEmail = async (email) => {
 
   try {
     const info = await transporter.sendMail(mailOptions);
-    console.log('邮件发送成功:', info.messageId);
+    console.log('邮件发送成功:', info.messageId,'验证码:',verificationCode,'邮箱:',email);
     return true;
   } catch (error) {
     console.error('邮件发送失败:', error);
-    pendingVerifications.delete(email); // 发送失败，移除验证码
+    pendingVerifications.delete(email);
     return false;
   }
 };

@@ -8,23 +8,23 @@ const db = require('../config/db');
 // 发送验证码
 router.post('/send-verification-code', rateLimiter, async (req, res) => {
   const { email } = req.body;
-  //验证邮箱格式
   if (!email || !isValidEmail(email)) {
     return res.status(400).json({ error: 'Invalid email address' });
   }
-  //发送验证码
-  const success = await sendVerificationEmail(email); 
+  const success = await sendVerificationEmail(email);
   if (!success) {
     return res.status(500).json({ error: 'Failed to send verification code' });
   }
   res.json({ message: 'Verification code sent successfully' });
 });
 
-//注册接口
-router.post('/register', async (req, res) => {
-  const { name, date, learnStage, email, code, pawd } = req.body;
+const bcrypt = require('bcrypt');
 
-  if (!name || !date || !learnStage || !email || !code || !pawd) {
+// 注册接口
+router.post('/register', async (req, res) => {
+  const { name, date, learnStage, email, code, pswd, sex, ava_url } = req.body;
+
+  if (!name || !date || !learnStage || !email || !code || !pswd) {
     return res.status(400).json({ error: 'Missing required fields' });
   }
 
@@ -32,9 +32,9 @@ router.post('/register', async (req, res) => {
     return res.status(400).json({ error: 'Invalid email address' });
   }
 
-  if (!isValidPassword(pawd)) {
-    return res.status(400).json({ 
-      error: 'Password must be at least 8 characters long and contain both uppercase and lowercase letters and numbers' 
+  if (!isValidPassword(pswd)) {
+    return res.status(400).json({
+      error: 'Password must be at least 8 characters long and contain both uppercase and lowercase letters and numbers'
     });
   }
 
@@ -42,27 +42,62 @@ router.post('/register', async (req, res) => {
     return res.status(400).json({ error: 'Invalid date format' });
   }
 
-  //验证验证码
-  const verificationData = require('../services/emailService').pendingVerifications.get(email);
+  const validSexes = ['男', '女', '不想说'];
+  if (sex && !validSexes.includes(sex)) {
+    return res.status(400).json({ error: 'Invalid value for sex' });
+  }
+
+  let avatarUrl = ava_url ? ava_url.trim() : '';
+  if (avatarUrl && !/^https?:\/\//i.test(avatarUrl)) {
+    return res.status(400).json({ error: 'Invalid avatar URL' });
+  }
+
+  const pendingVerifications = require('../services/emailService').pendingVerifications;
+  const verificationData = pendingVerifications.get(email);
   if (!verificationData) {
     return res.status(400).json({ error: 'Verification code not found or expired' });
   }
-
   if (verificationData.code !== code) {
     return res.status(400).json({ error: 'Invalid verification code' });
   }
 
-  //验证通过，删除验证码
-  require('../services/emailService').pendingVerifications.delete(email);
+  pendingVerifications.delete(email);
+
+  let hashedPassword;
+  try {
+    hashedPassword = await bcrypt.hash(pswd, 10);
+  } catch (err) {
+    console.error('Password hash failed:', err);
+    return res.status(500).json({ error: 'Registration failed' });
+  }
+
+  let avatarKey = null;
+  if (avatarUrl) {
+    try {
+      const url = new URL(avatarUrl);
+      avatarKey = url.pathname + url.search;
+    } catch (err) {
+      return res.status(400).json({ error: 'Invalid avatar URL format' });
+    }
+  }
 
   try {
-    //插入用户到数据库
-    //注意：在生产环境中应该对密码进行哈希处理
-    const sql = `INSERT INTO users (name, birth_date, learn_stage, email, password) 
-                 VALUES (?, ?, ?, ?, ?)`;
-    
-    await db.query(sql, [name, date, learnStage, email, pawd]);
-    
+    const sql = `
+      INSERT INTO users 
+        (name, birth_date, learn_stage, email, password, sex, avatar_key) 
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `;
+
+    await db.query(sql, [
+      name,
+      date,
+      learnStage,
+      email,
+      hashedPassword,
+      sex || null,
+      avatarKey || null
+    ]);
+
     res.json({ message: 'Registration successful' });
   } catch (error) {
     console.error('Database error:', error);
