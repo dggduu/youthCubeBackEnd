@@ -11,8 +11,9 @@ const app = express();
 
 //中间件
 app.use(express.json());
-app.use(cors());
-app.use(helmet());
+app.use(cors({
+  origin: '*',
+}));app.use(helmet());
 app.use(morgan('dev'));
 
 const db = require('./config/db');

@@ -23,7 +23,7 @@ const bcrypt = require('bcrypt');
 // 注册接口
 router.post('/register', async (req, res) => {
   const { name, date, learnStage, email, code, pswd, sex, ava_url } = req.body;
-
+  console.log("register: ",req.body);
   if (!name || !date || !learnStage || !email || !code || !pswd) {
     return res.status(400).json({ error: 'Missing required fields' });
   }
