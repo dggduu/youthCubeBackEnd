@@ -3,8 +3,10 @@ const dotenv = require('dotenv');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
-const { connectDB } = require('./src/config/sequelize');
+const { connectDB } = require('./src/config/Sequelize.js');
 const authRoutes = require('./src/routes/auth.js');
+
+const logger = require("./src/config/pino.js");
 //加载环境变量
 dotenv.config();
 
@@ -30,5 +32,5 @@ app.use((err, req, res, next) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+  logger.info(`服务正在此端口运行: ${PORT}`);
 });

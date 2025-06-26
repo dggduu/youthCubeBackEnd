@@ -1,4 +1,5 @@
 const nodemailer = require('nodemailer');
+const logger = require("../config/pino.js");
 require('dotenv').config();
 
 // 创建SMTP服务
@@ -58,10 +59,10 @@ const sendVerificationEmail = async (email) => {
 
   try {
     const info = await transporter.sendMail(mailOptions);
-    console.log('邮件发送成功:', info.messageId,'验证码:',verificationCode,'邮箱:',email);
+    logger.info('邮件发送成功:', info.messageId,'验证码:',verificationCode,'邮箱:',email);
     return true;
   } catch (error) {
-    console.error('邮件发送失败:', error);
+    logger.error('邮件发送失败:', error);
     pendingVerifications.delete(email);
     return false;
   }

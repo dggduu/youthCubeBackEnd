@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { rateLimiter } = require('../middleware/rateLimiter');
 const { emailVerification, registerFuc, loginFuc, refreshTokenFuc } = require('../controllers/authController.js');
-const { User } = require('../config/sequelize.js');
+const { User } = require('../config/Sequelize.js');
 
 
 // 发送验证码

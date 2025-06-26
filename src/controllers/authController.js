@@ -1,6 +1,8 @@
 const { isValidEmail, isValidPassword, isValidDate } = require('../utils/validator');
 const { registerUser, authenticateUser, refreshAuthToken } = require('../services/authService');
 const { sendVerificationEmail } = require('../services/emailService');
+const logger = require("../config/pino.js");
+
 const emailVerification = async (req, res) => {
   const { email } = req.body;
   if (!email || !isValidEmail(email)) {
@@ -15,7 +17,6 @@ const emailVerification = async (req, res) => {
 
 const registerFuc = async (req, res) => {
   const { name, date, learnStage, email, code, pswd, sex, ava_url } = req.body;
-  console.log("register: ",req.body);
 
   if (!name || !date || !learnStage || !email || !code || !pswd) {
     return res.status(400).json({ error: '缺少必要信息' });
@@ -80,7 +81,7 @@ const registerFuc = async (req, res) => {
     res.json({ message: '注册成功' });
 
   } catch (error) {
-    console.error('Error in register:', error);
+    logger.error('注册时遇到错误:', error);
     if (error.name === 'SequelizeUniqueConstraintError') {
       return res.status(409).json({ error: '邮件已被注册' });
     }
@@ -90,7 +91,6 @@ const registerFuc = async (req, res) => {
 
 const loginFuc = async (req, res) => {
   const { email, pswd } = req.body;
-  console.log("email:", email, "pswd:", pswd);
 
   if (!email || !pswd) {
     return res.status(400).json({ error: 'Email or password missing' });
@@ -111,7 +111,7 @@ const loginFuc = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error in login:', error);
+    logger.error('登录时遇到错误:', error);
     res.status(500).json({ error: '服务器错误' });
   }
 }
@@ -135,7 +135,7 @@ const refreshTokenFuc = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error refreshing token:', error.message);
+    logger.error('Error refreshing token:', error.message);
     return res.status(403).json({ error: error.message });
   }
 }

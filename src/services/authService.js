@@ -1,5 +1,6 @@
-const { User, RefreshToken } = require('../config/sequelize');
+const { User, RefreshToken } = require('../config/Sequelize.js');
 const { generateAccessToken, generateRefreshToken } = require('../utils/jwt');
+const logger = require("../config/pino.js");
 const jwt = require('jsonwebtoken');
 // 注册用户
 async function registerUser(userData) {
@@ -7,7 +8,7 @@ async function registerUser(userData) {
     const newUser = await User.create(userData);
     return newUser;
   } catch (error) {
-    console.error('注册时发生错误:', error);
+    logger.error('注册时发生错误:', error);
     throw error;
   }
 }
