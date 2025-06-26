@@ -3,7 +3,8 @@ const dotenv = require('dotenv');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
-const authRoutes = require('./routes/auth');
+const { connectDB } = require('./src/config/sequelize');
+const authRoutes = require('./src/routes/auth.js');
 //加载环境变量
 dotenv.config();
 
@@ -17,19 +18,14 @@ app.use(cors({
 app.use(helmet());
 app.use(morgan('dev'));
 
-const db = require('./config/db');
-
-db.query("SELECT 1")
-  .then(() => console.log('Database connected successfully'))
-  .catch(err => console.error('Database connection error:', err));
-
+connectDB();
 //路由
-app.use('/api/auth', authRoutes);
+app.use('/v1/api', authRoutes);
 
 //错误处理中间件
 app.use((err, req, res, next) => {
   console.error('Server error:', err);
-  res.status(500).json({ error: 'Internal server error' });
+  res.status(500).json({ error: '服务器内部错误' });
 });
 
 const PORT = process.env.PORT || 3000;

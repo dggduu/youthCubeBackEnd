@@ -11,7 +11,7 @@ const rateLimiter = (req, res, next) => {
   // 检查当前待处理的验证数量
   if (pendingVerifications.size >= parseInt(process.env.MAX_PENDING_VERIFICATIONS || '20')) {
     return res.status(500).json({ 
-      error: 'Too many verification requests. Please try again later.' 
+      error: '验证码请求太多，请等一下' 
     });
   }
 
