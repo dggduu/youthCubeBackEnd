@@ -1,30 +1,40 @@
-const express = require('express');
-const dotenv = require('dotenv');
-const cors = require('cors');
-const helmet = require('helmet');
-const morgan = require('morgan');
-const { connectDB } = require('./src/config/Sequelize.js');
-const authRoutes = require('./src/routes/auth.js');
+import express from 'express';
+import dotenv from 'dotenv';
+import cors from 'cors';
+import helmet from 'helmet';
+import morgan from 'morgan';
+import { connectDB } from './src/config/Sequelize.js';
+import authRoutes from './src/routes/auth.js';
+import { rateLimit } from 'express-rate-limit';
+import logger from "./src/config/pino.js";
 
-const logger = require("./src/config/pino.js");
-//加载环境变量
+// 加载环境变量
 dotenv.config();
+
+const limiter = rateLimit({ // 接口速率限制
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+});
 
 const app = express();
 
-//中间件
+// 中间件
 app.use(express.json());
 app.use(cors({
   origin: '*',
 }));
 app.use(helmet());
 app.use(morgan('dev'));
+app.use(limiter);
 
 connectDB();
-//路由
+
+// 路由
 app.use('/v1/api', authRoutes);
 
-//错误处理中间件
+// 错误处理中间件
 app.use((err, req, res, next) => {
   console.error('Server error:', err);
   res.status(500).json({ error: '服务器内部错误' });
