@@ -32,5 +32,5 @@ app.use((err, req, res, next) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  logger.info(`服务正在此端口运行: ${PORT}`);
+  logger.info(`服务正在此端口运行: http://localhost:${PORT}`);
 });
