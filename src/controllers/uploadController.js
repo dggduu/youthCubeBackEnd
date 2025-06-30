@@ -2,27 +2,29 @@ import minioService from '../services/minioService.js';
 import formidable from 'formidable';
 import fs from 'fs';
 import logger from "../config/pino.js";
+
 const activeUploads = {};
 
 class UploadController {
 
     async initiateUpload(req, res) {
         try {
-            const { fileName, contentType } = req.body;
-            if (!fileName || !contentType) {
-                return res.status(400).json({ message: 'fileName and contentType are required.' });
+            const { fileName, contentType, bucketName } = req.body;
+            if (!fileName || !contentType || !bucketName) {
+                return res.status(400).json({ message: 'fileName, contentType, and bucketName are required.' });
             }
 
             const objectName = `${req.user.userId}/${Date.now()}-${fileName}`;
-            const uploadId = await minioService.initiateMultipartUpload(objectName, contentType);
+            const uploadId = await minioService.initiateMultipartUpload(bucketName, objectName, contentType);
 
             activeUploads[uploadId] = {
+                bucketName,
                 objectName,
                 contentType,
                 uploadedParts: []
             };
 
-            res.status(200).json({ uploadId, objectName });
+            res.status(200).json({ uploadId, objectName, bucketName });
         } catch (error) {
             logger.error('无法初始化上传', error);
             res.status(500).json({ message: 'Failed to initiate upload', error: error.message });
@@ -44,7 +46,7 @@ class UploadController {
 
         form.parse(req, async (err, fields, files) => {
             if (err) {
-                logger.error('无法从列表解析数据',err);
+                logger.error('无法从列表解析数据', err);
                 return res.status(500).json({ message: 'Error processing file part', error: err.message });
             }
 
@@ -58,6 +60,7 @@ class UploadController {
 
             try {
                 const { etag, tempObjectName } = await minioService.uploadPart(
+                    uploadSession.bucketName,
                     uploadSession.objectName,
                     partBuffer,
                     parseInt(partNumber),
@@ -95,6 +98,7 @@ class UploadController {
 
         try {
             const result = await minioService.completeMultipartUpload(
+                uploadSession.bucketName,
                 uploadSession.objectName,
                 uploadId,
                 uploadSession.uploadedParts
@@ -121,6 +125,7 @@ class UploadController {
 
         try {
             const result = await minioService.abortMultipartUpload(
+                uploadSession.bucketName,
                 uploadId,
                 uploadSession.objectName
             );
