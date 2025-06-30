@@ -7,7 +7,7 @@ import { connectDB } from './src/config/Sequelize.js';
 import authRoutes from './src/routes/auth.js';
 import { rateLimit } from 'express-rate-limit';
 import logger from "./src/config/pino.js";
-
+import uploadRoutes from './src/routes/uploadRoutes.js';
 // 加载环境变量
 dotenv.config();
 
@@ -33,12 +33,13 @@ connectDB();
 
 // 路由
 app.use('/v1/api', authRoutes);
-
+app.use('/upload', uploadRoutes);
 // 错误处理中间件
 app.use((err, req, res, next) => {
-  console.error('Server error:', err);
+  logger.error('Server error:', err);
   res.status(500).json({ error: '服务器内部错误' });
 });
+
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
