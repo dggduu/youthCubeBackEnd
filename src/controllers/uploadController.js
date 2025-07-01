@@ -2,6 +2,7 @@ import minioService from '../services/minioService.js';
 import formidable from 'formidable';
 import fs from 'fs';
 import logger from "../config/pino.js";
+import path from "path";
 
 const activeUploads = {};
 
@@ -137,6 +138,51 @@ class UploadController {
             res.status(500).json({ message: 'Failed to abort upload', error: error.message });
         }
     }
+
+    async downloadFile(req, res) {
+        const splat = req.params.splat;
+
+        if (!Array.isArray(splat) || splat.length === 0) {
+            return res.status(400).json({ message: '缺少 Bucket 或是路径参数' });
+        }
+
+        const [bucketName, ...filePathSegments] = splat;
+        const filePath = filePathSegments.join('/');
+
+        if (!bucketName || !filePath) {
+            return res.status(400).json({ message: '缺少 Bucket 或是路径参数' });
+        }
+
+        try {
+            const { fileStream, stat } = await minioService.getFileStream(bucketName, filePath);
+
+            res.setHeader('Content-Type', stat.metaData['content-type'] || 'application/octet-stream');
+            res.setHeader('Content-Length', stat.size);
+            res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(path.basename(filePath))}"`);
+
+            fileStream.pipe(res);
+
+            fileStream.on('end', () => {
+            logger.info(`文件 '${filePath}' 成功下载.`);
+            });
+
+            fileStream.on('error', (err) => {
+            logger.error(`流传输失败:`, err);
+            if (!res.headersSent) {
+                return res.status(500).json({ message: '下载失败', error: err.message });
+            }
+            res.end();
+            });
+
+        } catch (error) {
+            logger.error(`下载时发生错误:`, error);
+            if (!res.headersSent) {
+            return res.status(500).json({ message: '下载失败', error: error.message });
+            }
+            res.end();
+        }
+    }
+
 }
 
 export default new UploadController();

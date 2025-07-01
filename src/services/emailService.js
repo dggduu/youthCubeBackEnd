@@ -1,6 +1,11 @@
-const nodemailer = require('nodemailer');
-const logger = require("../config/pino.js");
-require('dotenv').config();
+// emailService.js
+
+import nodemailer from 'nodemailer';
+import logger from "../config/pino.js";
+import dotenv from 'dotenv';
+
+// 加载环境变量
+dotenv.config();
 
 // 创建SMTP服务
 const transporter = nodemailer.createTransport({
@@ -13,12 +18,17 @@ const transporter = nodemailer.createTransport({
   }
 });
 
-// 存储验证码
-const { pendingVerifications } = require('../middleware/rateLimiter');
+// 引入存储验证码的 Map
+const { pendingVerifications } = await import('../middleware/rateLimiter.js');
 
+/**
+ * 发送验证码邮件
+ * @param {string} email - 接收者的邮箱地址
+ * @returns {Promise<boolean>} 是否发送成功
+ */
 const sendVerificationEmail = async (email) => {
   const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
-  
+
   pendingVerifications.set(email, {
     code: verificationCode,
     timestamp: Date.now()
@@ -31,7 +41,7 @@ const sendVerificationEmail = async (email) => {
     text: `您的验证码是：${verificationCode}\n该验证码将在5分钟后失效。`,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; border: 1px solid #ddd; padding: 10px 20px; border-radius: 8px;">
-          <img src="https://s21.ax1x.com/2025/06/19/pVVEzbn.png" alt="pVVEzbn.png" style="width: 50px;margin-top: 20px;;" />
+          <img src="https://s21.ax1x.com/2025/06/19/pVVEzbn.png" alt="pVVEzbn.png" style="width: 50px;margin-top: 20px;" />
           <h2 style="color: #333;">注册验证码</h2>
           <p>尊敬的用户，</p>
           <p>您正在注册我们的服务，请使用以下验证码完成验证：</p>
@@ -48,7 +58,7 @@ const sendVerificationEmail = async (email) => {
               max-width: 300px;
               ">
               ${verificationCode}
-              </div>
+          </div>
           <p>该验证码将在 <strong>5分钟</strong> 内有效。</p>
           <p>如果您没有进行此操作，请忽略本邮件。</p>
           <br>
@@ -59,7 +69,7 @@ const sendVerificationEmail = async (email) => {
 
   try {
     const info = await transporter.sendMail(mailOptions);
-    logger.info('邮件发送成功:', info.messageId,'验证码:',verificationCode,'邮箱:',email);
+    logger.info('邮件发送成功:', info.messageId, '验证码:', verificationCode, '邮箱:', email);
     return true;
   } catch (error) {
     logger.error('邮件发送失败:', error);
@@ -68,4 +78,4 @@ const sendVerificationEmail = async (email) => {
   }
 };
 
-module.exports = { sendVerificationEmail, pendingVerifications };
+export { sendVerificationEmail, pendingVerifications };

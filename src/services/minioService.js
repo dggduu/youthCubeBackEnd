@@ -92,6 +92,33 @@ class MinioService {
             throw error;
         }
     }
+
+    async getFileStream(bucket, objectName) {
+        try {
+            logger.debug(`尝试从桶 '${bucket}' 下载文件: '${objectName}'`);
+            // Check if the bucket exists first (optional, MinIO client will error if not)
+            const bucketExists = await minioClient.bucketExists(bucket);
+            if (!bucketExists) {
+                const error = new Error(`Bucket '${bucket}' 不存在.`);
+                error.statusCode = 404; // Custom status code for bucket not found
+                throw error;
+            }
+
+            const stat = await minioClient.statObject(bucket, objectName);
+            const fileStream = await minioClient.getObject(bucket, objectName);
+            logger.info(`成功从桶 '${bucket}' 获取文件流: '${objectName}'`);
+            return { fileStream, stat }; // Return both stream and metadata
+        } catch (error) {
+            logger.error(`无法从桶 '${bucket}' 下载文件 '${objectName}':`, error);
+            // Handle specific MinIO errors, e.g., object not found
+            if (error.code === 'NoSuchKey') {
+                const notFoundError = new Error(`文件 '${objectName}' 在桶 '${bucket}' 中不存在.`);
+                notFoundError.statusCode = 404; // Custom status code for file not found
+                throw notFoundError;
+            }
+            throw error;
+        }
+    }
 }
 
 export default new MinioService();

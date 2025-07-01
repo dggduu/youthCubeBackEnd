@@ -1,9 +1,13 @@
-const { Sequelize } = require('sequelize');
-const UserModel = require('../models/user.js');
-const RefreshTokenModel = require('../models/refreshToken.js');
-const dotenv = require('dotenv');
+// src/config/Sequelize.js
+
+import { Sequelize } from 'sequelize';
+import UserModel from '../models/user.js';
+import RefreshTokenModel from '../models/refreshToken.js';
+import dotenv from 'dotenv';
+import logger from './pino.js';
+
 dotenv.config();
-const logger = require("../config/pino.js");
+
 const sequelize = new Sequelize(
   process.env.DB_NAME,
   process.env.DB_USER,
@@ -31,7 +35,7 @@ const connectDB = async () => {
   }
 };
 
-module.exports = {
+export {
   sequelize,
   User,
   RefreshToken,

@@ -1,7 +1,13 @@
-const express = require('express');
+import express from 'express';
+import { rateLimiter } from '../middleware/rateLimiter.js';
+import {
+  emailVerification,
+  registerFuc,
+  loginFuc,
+  refreshTokenFuc
+} from '../controllers/authController.js';
+
 const router = express.Router();
-const { rateLimiter } = require('../middleware/rateLimiter');
-const { emailVerification, registerFuc, loginFuc, refreshTokenFuc } = require('../controllers/authController.js');
 
 // 发送验证码
 router.post('/send-verification-code', rateLimiter, emailVerification);
@@ -13,6 +19,6 @@ router.post('/register', registerFuc);
 router.post('/login', loginFuc);
 
 // 刷新 Token 接口
-router.post('/refresh_token',refreshTokenFuc );
+router.post('/refresh_token', refreshTokenFuc);
 
-module.exports = router;
+export default router;

@@ -1,7 +1,9 @@
-const { isValidEmail, isValidPassword, isValidDate } = require('../utils/validator');
-const { registerUser, authenticateUser, refreshAuthToken } = require('../services/authService');
-const { sendVerificationEmail } = require('../services/emailService');
-const logger = require("../config/pino.js");
+// authController.js
+
+import { isValidEmail, isValidPassword, isValidDate } from '../utils/validator.js';
+import { registerUser, authenticateUser, refreshAuthToken } from '../services/authService.js';
+import { sendVerificationEmail, pendingVerifications } from '../services/emailService.js';
+import logger from "../config/pino.js";
 
 const emailVerification = async (req, res) => {
   const { email } = req.body;
@@ -13,7 +15,7 @@ const emailVerification = async (req, res) => {
     return res.status(500).json({ error: '无法发送邮件' });
   }
   res.json({ message: '认证邮件发送成功' });
-}
+};
 
 const registerFuc = async (req, res) => {
   const { name, date, learnStage, email, code, pswd, sex, ava_url } = req.body;
@@ -51,7 +53,6 @@ const registerFuc = async (req, res) => {
     }
   }
 
-  const pendingVerifications = require('../services/emailService').pendingVerifications;
   const verificationData = pendingVerifications.get(email);
   if (!verificationData) {
     return res.status(400).json({ error: '认证码不存在' });
@@ -62,6 +63,8 @@ const registerFuc = async (req, res) => {
   pendingVerifications.delete(email);
 
   try {
+    // 假设 User 是通过 Sequelize 定义的模型，并已改为 ESM 导入
+    const { User } = await import('../models/index.js');
     const existingUser = await User.findOne({ where: { email } });
     if (existingUser) {
       return res.status(409).json({ error: '该邮箱已被注册' });
@@ -87,7 +90,7 @@ const registerFuc = async (req, res) => {
     }
     res.status(500).json({ error: '服务器错误' });
   }
-}
+};
 
 const loginFuc = async (req, res) => {
   const { email, pswd } = req.body;
@@ -114,7 +117,7 @@ const loginFuc = async (req, res) => {
     logger.error('登录时遇到错误:', error);
     res.status(500).json({ error: '服务器错误' });
   }
-}
+};
 
 const refreshTokenFuc = async (req, res) => {
   const { refreshToken } = req.body;
@@ -138,11 +141,11 @@ const refreshTokenFuc = async (req, res) => {
     logger.error('Error refreshing token:', error.message);
     return res.status(403).json({ error: error.message });
   }
-}
+};
 
-module.exports = {
-    emailVerification,
-    registerFuc,
-    loginFuc,
-    refreshTokenFuc
+export {
+  emailVerification,
+  registerFuc,
+  loginFuc,
+  refreshTokenFuc
 };

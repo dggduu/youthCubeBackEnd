@@ -1,5 +1,5 @@
-const { DataTypes } = require('sequelize');
-module.exports = (sequelize) => {
+import { DataTypes } from "sequelize";
+export default (sequelize) => {
   const RefreshToken = sequelize.define('RefreshToken', {
     id: {
       type: DataTypes.INTEGER,

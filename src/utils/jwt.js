@@ -1,5 +1,10 @@
-const jwt = require('jsonwebtoken');
-require('dotenv').config(); // 加载环境变量
+// jwt.js
+
+import jwt from 'jsonwebtoken';
+import dotenv from 'dotenv';
+
+// 加载环境变量
+dotenv.config();
 
 const ACCESS_TOKEN_SECRET = process.env.JWT_SECRET;
 const REFRESH_TOKEN_SECRET = process.env.JWT_REFRESH_SECRET;
@@ -27,7 +32,7 @@ const generateRefreshToken = (payload) => {
 /**
  * 验证认证密钥
  * @param {string} token - 认证密钥
- * @returns {object|null} 解码后的payoff，验证失败返回null
+ * @returns {object|null} 解码后的 payload，验证失败返回 null
  */
 const verifyAccessToken = (token) => {
   try {
@@ -40,7 +45,7 @@ const verifyAccessToken = (token) => {
 /**
  * 验证刷新密钥
  * @param {string} token - 刷新密钥
- * @returns {object|null} 解码后的负载，验证失败返回null
+ * @returns {object|null} 解码后的 payload，验证失败返回 null
  */
 const verifyRefreshToken = (token) => {
   try {
@@ -50,7 +55,7 @@ const verifyRefreshToken = (token) => {
   }
 };
 
-module.exports = {
+export {
   generateAccessToken,
   generateRefreshToken,
   verifyAccessToken,

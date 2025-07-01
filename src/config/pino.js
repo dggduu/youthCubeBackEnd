@@ -1,5 +1,4 @@
-const pino = require('pino');
-
+import pino from "pino";
 const colors = {
   trace: '\x1b[90m',
   debug: '\x1b[37m',
@@ -47,4 +46,4 @@ const logger = pino(
   prettyStream
 );
 
-module.exports = logger;
+export default logger;

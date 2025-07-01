@@ -1,8 +1,13 @@
-const { User, RefreshToken } = require('../config/Sequelize.js');
-const { generateAccessToken, generateRefreshToken } = require('../utils/jwt');
-const logger = require("../config/pino.js");
-const jwt = require('jsonwebtoken');
-// 注册用户
+// authService.js
+
+import { User, RefreshToken } from '../config/Sequelize.js';
+import { generateAccessToken, generateRefreshToken } from '../utils/jwt.js';
+import logger from "../config/pino.js";
+import jwt from 'jsonwebtoken';
+
+/**
+ * 注册用户
+ */
 async function registerUser(userData) {
   try {
     const newUser = await User.create(userData);
@@ -12,7 +17,10 @@ async function registerUser(userData) {
     throw error;
   }
 }
-// 查找用户是否存在
+
+/**
+ * 认证用户登录信息
+ */
 async function authenticateUser(email, password) {
   try {
     const user = await User.findOne({
@@ -38,24 +46,25 @@ async function authenticateUser(email, password) {
     const refreshTokenPayload = {
       userId: user.id,
     };
-    const refreshToken = generateRefreshToken(refreshTokenPayload);
+    const refreshTokenStr = generateRefreshToken(refreshTokenPayload);
 
-    const decodedRefreshToken = jwt.decode(refreshToken);
+    const decodedRefreshToken = jwt.decode(refreshTokenStr);
     if (!decodedRefreshToken || !decodedRefreshToken.exp) {
       throw new Error('Token 生成错误');
     }
     const expiresAt = new Date(decodedRefreshToken.exp * 1000);
 
+    // 删除旧刷新令牌并创建新的
     await RefreshToken.destroy({ where: { user_id: user.id } });
     await RefreshToken.create({
       user_id: user.id,
-      refresh_token: refreshToken,
+      refresh_token: refreshTokenStr,
       expires_at: expiresAt,
     });
 
     return {
       accessToken,
-      refreshToken,
+      refreshToken: refreshTokenStr,
       user: {
         id: user.id,
         name: user.name,
@@ -71,7 +80,9 @@ async function authenticateUser(email, password) {
   }
 }
 
-// 刷新密钥
+/**
+ * 刷新访问令牌
+ */
 async function refreshAuthToken(oldRefreshToken) {
   try {
     // 验证刷新密钥
@@ -80,7 +91,7 @@ async function refreshAuthToken(oldRefreshToken) {
     const storedRefreshToken = await RefreshToken.findOne({
       where: {
         user_id: decoded.userId,
-        token: oldRefreshToken,
+        refresh_token: oldRefreshToken,
       },
     });
 
@@ -88,25 +99,26 @@ async function refreshAuthToken(oldRefreshToken) {
       throw new Error('刷新密钥不存在');
     }
 
-    // 生成新的刷新密钥
+    // 生成新 token
     const newAccessToken = generateAccessToken({ userId: decoded.userId, email: decoded.email });
 
     const newRefreshToken = generateRefreshToken({ userId: decoded.userId });
     const decodedNewRefreshToken = jwt.decode(newRefreshToken);
 
     if (!decodedNewRefreshToken || !decodedNewRefreshToken.exp) {
-        throw new Error('生成刷新密钥时出现错误');
+      throw new Error('生成刷新密钥时出现错误');
     }
+
     const newExpiresAt = new Date(decodedNewRefreshToken.exp * 1000);
 
     await storedRefreshToken.update({
-      token: newRefreshToken,
-      expires_at: newExpiresAt
+      refresh_token: newRefreshToken,
+      expires_at: newExpiresAt,
     });
 
     return {
       accessToken: newAccessToken,
-      refreshToken: newRefreshToken
+      refreshToken: newRefreshToken,
     };
 
   } catch (error) {
@@ -120,7 +132,7 @@ async function refreshAuthToken(oldRefreshToken) {
   }
 }
 
-module.exports = {
+export {
   registerUser,
   authenticateUser,
   refreshAuthToken,
