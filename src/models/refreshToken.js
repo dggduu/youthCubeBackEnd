@@ -1,4 +1,5 @@
 import { DataTypes } from "sequelize";
+
 export default (sequelize) => {
   const RefreshToken = sequelize.define('RefreshToken', {
     id: {

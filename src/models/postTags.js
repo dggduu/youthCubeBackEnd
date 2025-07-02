@@ -1,6 +1,6 @@
-const { DataTypes } = require("sequelize");
+import { DataTypes } from "sequelize";
 
-module.exports = (sequelize) => {
+export default (sequelize) => {
   const PostTags = sequelize.define("PostTags", {
     post_id: {
       type: DataTypes.INTEGER,
@@ -25,7 +25,7 @@ module.exports = (sequelize) => {
   });
 
   PostTags.associate = function(models) {
-    PostTags.belongsTo(models.posts, {
+    PostTags.belongsTo(models.Posts, {
       foreignKey: "post_id",
       as: "post",
       onDelete: "CASCADE",

@@ -1,7 +1,7 @@
-const { DataTypes } = require("sequelize");
+import { DataTypes } from "sequelize";
 
-module.exports = (sequelize) => {
-  const collections = sequelize.define("collections", {
+export default (sequelize) => {
+  const Collections = sequelize.define("collections", {
     collection_id: {
       type: DataTypes.INTEGER,
       primaryKey: true,
@@ -30,19 +30,21 @@ module.exports = (sequelize) => {
     tableName: 'collections',
   });
 
-  collections.belongsTo(sequelize.models.users, {
-    foreignKey: 'user_id',
-    as: 'user',
-    onDelete: 'CASCADE',
-    onUpdate: 'CASCADE'
-  });
+  Collections.associate = function(models) {
+    Collections.belongsTo(models.User, {
+      foreignKey: 'user_id',
+      as: 'user',
+      onDelete: 'CASCADE',
+      onUpdate: 'CASCADE'
+    });
 
-  collections.belongsTo(sequelize.models.posts, {
-    foreignKey: 'post_id',
-    as: 'post',
-    onDelete: 'CASCADE',
-    onUpdate: 'CASCADE'
-  });
+    Collections.belongsTo(models.Posts, {
+      foreignKey: 'post_id',
+      as: 'post',
+      onDelete: 'CASCADE',
+      onUpdate: 'CASCADE'
+    });
+  };
 
-  return collections;
+  return Collections;
 };

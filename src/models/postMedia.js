@@ -1,6 +1,6 @@
-const { DataTypes } = require("sequelize");
+import { DataTypes } from "sequelize";
 
-module.exports = (sequelize) => {
+export default (sequelize) => {
   const PostMedia = sequelize.define("postMedia", {
     media_id: {
       type: DataTypes.INTEGER,
@@ -37,7 +37,8 @@ module.exports = (sequelize) => {
   });
 
   PostMedia.associate = function(models) {
-    PostMedia.belongsTo(models.posts, {
+    // Corrected: Use models.Posts (uppercase P)
+    PostMedia.belongsTo(models.Posts, {
       foreignKey: "post_id",
       as: "post",
       onDelete: "CASCADE",

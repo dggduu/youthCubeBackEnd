@@ -1,6 +1,6 @@
-const { DataTypes } = require("sequelize");
+import { DataTypes } from "sequelize";
 
-module.exports = (sequelize) => {
+export default (sequelize) => {
   const Posts = sequelize.define("Posts", {
     post_id: {
       type: DataTypes.INTEGER,
@@ -65,46 +65,45 @@ module.exports = (sequelize) => {
     tableName: 'posts',
   });
 
-  Posts.associate = function(models) {
+Posts.associate = function(models) {
+  Posts.belongsTo(models.User, {
+    foreignKey: "user_id",
+    as: "author",
+    onDelete: "CASCADE",
+    onUpdate: "CASCADE"
+  });
 
-    Posts.belongsTo(models.users, {
-      foreignKey: "user_id",
-      as: "author",
-      onDelete: "CASCADE",
-      onUpdate: "CASCADE"
-    });
+  models.User.hasMany(Posts, {
+    foreignKey: "user_id",
+    as: "posts"
+  });
 
-    models.users.hasMany(Posts, {
-      foreignKey: "user_id",
-      as: "posts"
-    });
+  Posts.hasMany(models.PostMedia, {
+    foreignKey: "post_id",
+    as: "media"
+  });
 
-    Posts.hasMany(models.postMedia, {
-      foreignKey: "post_id",
-      as: "media"
-    });
+  Posts.hasMany(models.Likes, {
+    foreignKey: "target_id",
+    constraints: false,
+    scope: {
+      target_type: 'post'
+    },
+    as: "likes"
+  });
 
-    Posts.hasMany(models.likes, {
-      foreignKey: "target_id",
-      constraints: false,
-      scope: {
-        target_type: 'post'
-      },
-      as: "likes"
-    });
+  Posts.hasMany(models.Comments, {
+    foreignKey: "post_id",
+    as: "comments"
+  });
 
-    Posts.hasMany(models.comments, {
-      foreignKey: "post_id",
-      as: "comments"
-    });
+  Posts.belongsToMany(models.tags, {
+    through: models.PostTags,
+    foreignKey: "post_id",
+    otherKey: "tag_id",
+    as: "tags"
+  });
+};
 
-    Posts.belongsToMany(models.tags, {
-      through: models.PostTags,
-      foreignKey: "post_id",
-      otherKey: "tag_id",
-      as: "tags"
-    });
-  };
-
-  return Posts;
+return Posts;
 };

@@ -10,15 +10,15 @@ import {
 const router = express.Router();
 
 // 发送验证码
-router.post('/send-verification-code', rateLimiter, emailVerification);
+router.post('/api/send-verification-code', rateLimiter, emailVerification);
 
 // 注册接口
-router.post('/register', registerFuc);
+router.post('/api/register', registerFuc);
 
 // 登录接口
-router.post('/login', loginFuc);
+router.post('/api/login', loginFuc);
 
 // 刷新 Token 接口
-router.post('/refresh_token', refreshTokenFuc);
+router.post('/api/refresh_token', refreshTokenFuc);
 
 export default router;

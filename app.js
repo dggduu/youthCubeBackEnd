@@ -9,6 +9,13 @@ import { rateLimit } from 'express-rate-limit';
 import logger from "./src/config/pino.js";
 import uploadRoutes from './src/routes/uploadRoutes.js';
 import downloadRoute from "./src/routes/downloadRoutes.js";
+
+import CommentRoutes from "./src/routes/CommentRoutes.js";
+import PostRoutes from "./src/routes/PostRouter.js";
+import TagRoutes from "./src/routes/TagRoutes.js";
+import TeamRoutes from "./src/routes/TeamRoutes.js";
+import UserRoutes from "./src/routes/UserRoutes.js";
+
 // 加载环境变量
 dotenv.config();
 
@@ -28,12 +35,17 @@ app.use(cors({
 }));
 app.use(helmet());
 app.use(morgan('dev'));
-app.use(limiter);
+//app.use(limiter);
 
 connectDB();
 
 // 路由
-app.use('/v1/api', authRoutes);
+app.use('/v1', authRoutes);
+app.use('/v1', CommentRoutes);
+app.use('/v1', PostRoutes);
+app.use('/v1', TagRoutes);
+app.use('/v1', TeamRoutes);
+app.use('/v1', UserRoutes);
 app.use('/upload', uploadRoutes);
 app.use('/dl',downloadRoute);
 // 错误处理中间件

@@ -1,7 +1,8 @@
 import { DataTypes } from "sequelize";
 import * as bcrypt from "bcrypt";
- export default (sequelize) => {
-  const User = sequelize.define('User', {
+
+export default (sequelize) => {
+  const User = sequelize.define("User", {
     id: {
       type: DataTypes.INTEGER,
       primaryKey: true,
@@ -40,24 +41,21 @@ import * as bcrypt from "bcrypt";
       type: DataTypes.TEXT,
       allowNull: true,
     },
+    bio: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    team_id: {
+      type: DataTypes.TINYINT,
+      allowNull: true,
+    },
     is_member: {
       type: DataTypes.BOOLEAN,
-      allowNull: true,
       defaultValue: false,
-    },
-    created_at: {
-      type: DataTypes.DATE, 
       allowNull: true,
-      defaultValue: sequelize.literal('CURRENT_TIMESTAMP'),
-    },
-    updated_at: {
-      type: DataTypes.DATE,
-      allowNull: true,
-      defaultValue: sequelize.literal('CURRENT_TIMESTAMP'),
-    },
+    }
   }, {
     tableName: 'users',
- 
     timestamps: true,
     createdAt: 'created_at',
     updatedAt: 'updated_at',

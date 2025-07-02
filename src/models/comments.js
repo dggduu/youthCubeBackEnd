@@ -1,6 +1,6 @@
-const { DataTypes } = require("sequelize");
+import { DataTypes } from "sequelize";
 
-module.exports = (sequelize) => {
+export default (sequelize) => {
   const Comments = sequelize.define("comments", {
     comment_id: {
       type: DataTypes.INTEGER,
@@ -37,14 +37,14 @@ module.exports = (sequelize) => {
   });
 
   Comments.associate = function(models) {
-    Comments.belongsTo(models.posts, {
+    Comments.belongsTo(models.Posts, {
       foreignKey: "post_id",
       as: "post",
       onDelete: "CASCADE",
       onUpdate: "CASCADE"
     });
 
-    Comments.belongsTo(models.users, {
+    Comments.belongsTo(models.User, {
       foreignKey: "user_id",
       as: "user",
       onDelete: "CASCADE",

@@ -1,6 +1,6 @@
-const { DataTypes } = require("sequelize");
+import { DataTypes } from "sequelize";
 
-module.exports = (sequelize) => {
+export default (sequelize) => {
   const UserFollows = sequelize.define("UserFollows", {
     follow_id: {
       type: DataTypes.INTEGER,
@@ -32,14 +32,14 @@ module.exports = (sequelize) => {
   });
 
   UserFollows.associate = function(models) {
-    UserFollows.belongsTo(models.users, {
+    UserFollows.belongsTo(models.User, {
       foreignKey: "follower_id",
       as: "follower",
       onDelete: "CASCADE",
       onUpdate: "CASCADE"
     });
 
-    UserFollows.belongsTo(models.users, {
+    UserFollows.belongsTo(models.User, {
       foreignKey: "following_id",
       as: "following",
       onDelete: "CASCADE",
