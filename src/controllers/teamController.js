@@ -47,7 +47,7 @@ export const teamController = {
         where: whereCondition,
         limit,
         offset,
-        order: [['createdAt', 'DESC']], // 更标准的字段名
+        order: [['create_at', 'DESC']], // 更标准的字段名
       });
 
       const response = getPagingData(data, page, limit);

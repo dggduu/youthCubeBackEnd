@@ -17,7 +17,7 @@ export const commentController = {
     try {
       const { postId } = req.params;
       const { content, parent_comment_id } = req.body;
-      const user_id = req.user.id; // Authenticated user ID
+      const user_id = req.user.id;
 
       if (!content) {
         return res.status(400).json({ message: 'Comment content cannot be empty.' });
@@ -42,7 +42,6 @@ export const commentController = {
         parent_comment_id,
       });
 
-      // Increment comments_count on the post
       await Posts.increment('comments_count', { by: 1, where: { post_id: postId } });
 
       const populatedComment = await Comments.findByPk(newComment.comment_id, {
@@ -73,7 +72,7 @@ export const commentController = {
       }
 
       const data = await Comments.findAndCountAll({
-        where: { post_id: postId, parent_comment_id: { [Op.is]: null } }, // Fetch top-level comments
+        where: { post_id: postId, parent_comment_id: { [Op.is]: null } },
         include: [
           { model: User, as: 'user', attributes: ['id', 'name', 'avatar_key'] },
           {
@@ -81,7 +80,7 @@ export const commentController = {
             as: 'replies',
             include: [{ model: User, as: 'user', attributes: ['id', 'name', 'avatar_key'] }],
             order: [['created_at', 'ASC']],
-            limit: 3 // Example: fetch initial replies
+            limit: 3
           }
         ],
         limit,
@@ -180,18 +179,17 @@ export const commentController = {
         return res.status(404).json({ message: 'Comment not found.' });
       }
 
-      if (comment.user_id !== user_id /* && !req.user.isAdmin */) {
+      if (comment.user_id !== user_id) {
         return res.status(403).json({ message: 'Forbidden: You can only delete your own comments.' });
       }
 
-      const postId = comment.post_id; // Get post_id before deleting
+      const postId = comment.post_id;
 
       const deleted = await Comments.destroy({ where: { comment_id: id } });
 
       if (deleted) {
-        // Decrement comments_count on the post
         await Posts.decrement('comments_count', { by: 1, where: { post_id: postId, comments_count: { [Op.gt]: 0 } } });
-        res.status(204).send(); // No content
+        res.status(204).send();
       } else {
         res.status(404).json({ message: 'Comment not found.' });
       }
@@ -209,7 +207,7 @@ export const commentController = {
   likeComment: async (req, res) => {
     try {
       const { id: commentId } = req.params;
-      const user_id = req.user.id;
+      const user_id = req.user.userId;
 
       const existingLike = await Likes.findOne({
         where: { user_id, target_id: commentId, target_type: 'comment' },
@@ -236,14 +234,14 @@ export const commentController = {
   unlikeComment: async (req, res) => {
     try {
       const { id: commentId } = req.params;
-      const user_id = req.user.id;
+      const user_id = req.user.userId;
 
       const deleted = await Likes.destroy({
         where: { user_id, target_id: commentId, target_type: 'comment' },
       });
 
       if (deleted) {
-        res.status(204).send(); // No content
+        res.status(204).send();
       } else {
         res.status(404).json({ message: 'Comment not liked by this user.' });
       }
