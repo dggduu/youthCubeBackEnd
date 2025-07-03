@@ -73,10 +73,10 @@ Posts.associate = function(models) {
     onUpdate: "CASCADE"
   });
 
-  models.User.hasMany(Posts, {
-    foreignKey: "user_id",
-    as: "posts"
-  });
+  // models.User.hasMany(Posts, {
+  //   foreignKey: "user_id",
+  //   as: "posts"
+  // });
 
   Posts.hasMany(models.PostMedia, {
     foreignKey: "post_id",

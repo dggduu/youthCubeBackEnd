@@ -1,8 +1,8 @@
 import { User } from '../config/Sequelize.js';
 import { Posts } from '../config/Sequelize.js';
 import { UserFollows } from '../config/Sequelize.js';
+import { Team } from '../config/Sequelize.js';
 import { Op } from '../config/Sequelize.js';
-
 import { getPagination, getPagingData } from '../utils/pagination.js';
 
 export const userController = {
@@ -36,7 +36,7 @@ export const userController = {
 
   /**
    * @route GET /api/users/:id
-   * @desc Get a user by ID with posts
+   * @desc Get a user by ID with posts and optionally team info if team_id is not null
    * @access Public
    */
   getUserById: async (req, res) => {
@@ -50,6 +50,11 @@ export const userController = {
             model: Posts,
             as: 'posts',
             attributes: ['post_id', 'title', 'cover_image_url', 'likes_count', 'comments_count', 'collected_count'],
+          },
+          {
+            model: Team,
+            as: 'team',
+            attributes: ['team_id', 'team_name', 'description'],
           },
         ],
       });
@@ -73,25 +78,33 @@ export const userController = {
   updateUser: async (req, res) => {
     try {
       const { id } = req.params;
-      const currentUserId = req.user.id;
-
+      const currentUserId = req.user.userId;
+      // console.log("test:",id,currentUserId,req.user);
+      
       if (currentUserId !== parseInt(id)) {
         return res.status(403).json({ message: 'Forbidden: You can only update your own profile.' });
       }
 
-      const { name, birth_date, learn_stage, email, sex, avatar_key, is_member, password } = req.body;
+      const { name, birth_date, learn_stage, email, sex, avatar_key, is_member, password, team_id, bio } = req.body;
 
       const [updated] = await User.update(
-        { name, birth_date, learn_stage, email, sex, avatar_key, is_member, password },
+        { name, birth_date, learn_stage, email, sex, avatar_key, is_member, password, team_id, bio },
         {
           where: { id },
-          individualHooks: true, // for beforeUpdate to hash password
+          individualHooks: true,
         }
       );
 
       if (updated) {
         const updatedUser = await User.findByPk(id, {
           attributes: { exclude: ['password'] },
+          include: [
+            {
+              model: Team,
+              as: 'team',
+              attributes: ['team_id', 'team_name']
+            }
+          ]
         });
         return res.status(200).json({ message: 'User updated successfully.', user: updatedUser });
       }
@@ -120,7 +133,7 @@ export const userController = {
       const deleted = await User.destroy({ where: { id } });
 
       if (deleted) {
-        return res.status(204).send(); // No content
+        return res.status(204).send();
       }
 
       return res.status(404).json({ message: 'User not found.' });

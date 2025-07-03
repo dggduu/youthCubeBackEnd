@@ -14,6 +14,7 @@ import postTagsModel from '../models/postTags.js';
 import tagsModel from '../models/tags.js';
 import teamsModel from '../models/teams.js';
 import userFollowsModel from '../models/userFollows.js';
+
 // 加载环境变量
 dotenv.config();
 
@@ -44,6 +45,23 @@ const UserFollows = userFollowsModel(sequelize, Sequelize);
 
 User.hasMany(RefreshToken, { foreignKey: 'user_id', as: 'refreshTokens' });
 RefreshToken.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
+
+User.belongsTo(Team, {
+  foreignKey: 'team_id',
+  as: 'team',
+});
+
+Team.hasMany(User, {
+  foreignKey: 'team_id', 
+  as: 'users',
+});
+
+User.hasMany(Posts, { foreignKey: 'user_id', as: 'posts' });
+Posts.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
+
+UserFollows.belongsTo(User, { foreignKey: 'follower_id', as: 'follower' });
+
+UserFollows.belongsTo(User, { foreignKey: 'following_id', as: 'following' });
 
 const db = {
   sequelize,

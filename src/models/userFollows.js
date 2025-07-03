@@ -31,21 +31,21 @@ export default (sequelize) => {
     tableName: 'user_follows',
   });
 
-  UserFollows.associate = function(models) {
-    UserFollows.belongsTo(models.User, {
-      foreignKey: "follower_id",
-      as: "follower",
-      onDelete: "CASCADE",
-      onUpdate: "CASCADE"
-    });
+  // UserFollows.associate = function(models) {
+  //   UserFollows.belongsTo(models.User, {
+  //     foreignKey: "follower_id",
+  //     as: "follower",
+  //     onDelete: "CASCADE",
+  //     onUpdate: "CASCADE"
+  //   });
 
-    UserFollows.belongsTo(models.User, {
-      foreignKey: "following_id",
-      as: "following",
-      onDelete: "CASCADE",
-      onUpdate: "CASCADE"
-    });
-  };
+  //   UserFollows.belongsTo(models.User, {
+  //     foreignKey: "following_id",
+  //     as: "following",
+  //     onDelete: "CASCADE",
+  //     onUpdate: "CASCADE"
+  //   });
+  // };
 
   return UserFollows;
 };
