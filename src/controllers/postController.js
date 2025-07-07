@@ -78,7 +78,7 @@ export const postController = {
     try {
       const { page, size, userId, search, sortBy, order, tagId } = req.query;
       const { limit, offset } = getPagination(page, size);
-
+      console.log('Index:',limit, offset, req.query);
       let whereCondition = {};
       if (userId) {
         whereCondition.user_id = userId;
@@ -304,7 +304,7 @@ export const postController = {
       const deleted = await Likes.destroy({
         where: { user_id, target_id: postId, target_type: 'post' },
       });
-
+      await Posts.increment('likes_count', { by: -1, where: { post_id: postId }, silent: true });
       if (deleted) {
         res.status(204).send();
       } else {
@@ -312,6 +312,41 @@ export const postController = {
       }
     } catch (error) {
       console.error('Unlike post error:', error);
+      res.status(500).json({ message: 'Server error.', error: error.message });
+    }
+  },
+  /**
+   * @route GET /api/posts/:id/like/status
+   * @desc Get like status of current user for a post
+   * @access Private
+   */
+  getLikeStatus: async (req, res) => {
+    try {
+      const { id: postId } = req.params;
+      const user_id = req.user.userId;
+
+      const existingLike = await Likes.findOne({
+        where: {
+          user_id,
+          target_id: postId,
+          target_type: 'post'
+        }
+      });
+
+      const post = await Posts.findByPk(postId);
+      if (!post) {
+        return res.status(404).json({ message: '文章不存在' });
+      }
+
+      const likeCount = post.likes_count || 0;
+
+      res.json({
+        liked: !!existingLike,
+        likeCount
+      });
+
+    } catch (error) {
+      console.error('Get like status error:', error);
       res.status(500).json({ message: 'Server error.', error: error.message });
     }
   }

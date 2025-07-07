@@ -3,7 +3,7 @@ import { Posts } from '../config/Sequelize.js';
 import { User } from '../config/Sequelize.js';
 import { Likes } from '../config/Sequelize.js';
 import { Op } from '../config/Sequelize.js';
-
+import { Sequelize } from 'sequelize';
 import { getPagination, getPagingData } from '../utils/pagination.js';
 
 // 导出 commentController 对象
@@ -17,8 +17,7 @@ export const commentController = {
     try {
       const { postId } = req.params;
       const { content, parent_comment_id } = req.body;
-      const user_id = req.user.id;
-
+      const user_id = req.user.userId;
       if (!content) {
         return res.status(400).json({ message: 'Comment content cannot be empty.' });
       }
@@ -61,40 +60,42 @@ export const commentController = {
    * @access Public
    */
   getCommentsForPost: async (req, res) => {
-    try {
-      const { postId } = req.params;
-      const { page, size } = req.query;
-      const { limit, offset } = getPagination(page, size);
+      try {
+        const { postId } = req.params;
+        const { page, size } = req.query;
+        const { limit, offset } = getPagination(page, size);
+        console.log(page,size);
+        const post = await Posts.findByPk(postId);
+        if (!post) {
+          return res.status(404).json({ message: 'Post not found.' });
+        }
 
-      const post = await Posts.findByPk(postId);
-      if (!post) {
-        return res.status(404).json({ message: 'Post not found.' });
+        const data = await Comments.findAndCountAll({
+          where: { post_id: postId, parent_comment_id: { [Op.is]: null } },
+          attributes: {
+            include: [
+              [
+                Sequelize.literal(`(
+                  SELECT COUNT(*)
+                  FROM comments AS childComments
+                  WHERE childComments.parent_comment_id = comments.comment_id
+                )`),
+                'SubReplyCount'
+              ]
+            ]
+          },
+          limit,
+          offset,
+          order: [['created_at', 'ASC']],
+        });
+
+        const response = getPagingData(data, page, limit);
+        res.status(200).json(response);
+      } catch (error) {
+        console.error('Get comments for post error:', error);
+        res.status(500).json({ message: 'Server error.', error: error.message });
       }
-
-      const data = await Comments.findAndCountAll({
-        where: { post_id: postId, parent_comment_id: { [Op.is]: null } },
-        include: [
-          { model: User, as: 'user', attributes: ['id', 'name', 'avatar_key'] },
-          {
-            model: Comments,
-            as: 'replies',
-            include: [{ model: User, as: 'user', attributes: ['id', 'name', 'avatar_key'] }],
-            order: [['created_at', 'ASC']],
-            limit: 3
-          }
-        ],
-        limit,
-        offset,
-        order: [['created_at', 'ASC']],
-      });
-
-      const response = getPagingData(data, page, limit);
-      res.status(200).json(response);
-    } catch (error) {
-      console.error('Get comments for post error:', error);
-      res.status(500).json({ message: 'Server error.', error: error.message });
-    }
-  },
+    },
 
   /**
    * @route GET /api/comments/:commentId/replies

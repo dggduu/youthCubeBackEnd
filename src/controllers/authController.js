@@ -135,6 +135,7 @@ const refreshTokenFuc = async (req, res) => {
 
     res.json({
       accessToken: result.accessToken,
+      refreshToken: result.refreshToken
     });
 
   } catch (error) {

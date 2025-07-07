@@ -56,7 +56,7 @@ export default (sequelize) => {
     updated_at: {
       type: DataTypes.DATE,
       allowNull: true,
-      defaultValue: sequelize.literal("CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"),
+      defaultValue: sequelize.literal("CURRENT_TIMESTAMP"),
     }
   }, {
     timestamps: true,

@@ -13,7 +13,7 @@ export default (sequelize) => {
       allowNull: false,
     },
     media_url: {
-      type: DataTypes.STRING(255),
+      type: DataTypes.TEXT,
       allowNull: false,
     },
     media_type: {

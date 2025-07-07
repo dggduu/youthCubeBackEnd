@@ -1,5 +1,5 @@
 export const getPagination = (page = 0, size = 10) => {
-  const limit = Math.min(size, 100);
+  const limit = Math.min(size, 20);
   const offset = page * limit;
   return { limit, offset };
 };
