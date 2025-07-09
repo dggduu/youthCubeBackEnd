@@ -183,6 +183,94 @@ class UploadController {
         }
     }
 
+    async quickUploader(req, res) {
+        try {
+            if (!req.is('multipart/form-data')) {
+                return res.status(400).json({ message: 'Only multipart/form-data is supported' });
+            }
+
+            const form = formidable({
+                maxFileSize: 10 * 1024 * 1024, // 10MB limit
+                multiples: false
+            });
+
+            form.parse(req, async (err, fields, files) => {
+                if (err) {
+                    if (err.code === 'LIMIT_FILE_SIZE') {
+                        return res.status(413).json({ message: 'File size exceeds 10MB limit' });
+                    }
+                    logger.error('Error parsing form data:', err);
+                    return res.status(500).json({ message: 'Error processing upload', error: err.message });
+                }
+
+                const { bucketName } = fields;
+                if (!bucketName || !bucketName[0]) {
+                    return res.status(400).json({ message: 'bucketName is required' });
+                }
+
+                const file = files.file;
+                if (!file || !file[0]) {
+                    return res.status(400).json({ message: 'No file uploaded' });
+                }
+
+                const uploadedFile = file[0];
+                const contentType = uploadedFile.mimetype || 'application/octet-stream';
+                const originalFilename = uploadedFile.originalFilename || 'unnamed_file';
+                
+                const objectName = `${req.user.userId}/${Date.now()}-${originalFilename}`;
+
+                try {
+                    const fileContent = fs.readFileSync(uploadedFile.filepath);
+
+                    const result = await minioService.putObject(
+                        bucketName[0],
+                        objectName,
+                        fileContent,
+                        fileContent.length,
+                        {
+                            'Content-Type': contentType,
+                            'original-filename': originalFilename
+                        }
+                    );
+
+                    fs.unlink(uploadedFile.filepath, (unlinkErr) => {
+                        if (unlinkErr) logger.error('Error deleting temp file:', unlinkErr);
+                    });
+
+                    res.status(200).json({
+                        message: 'File uploaded successfully',
+                        objectName,
+                        bucketName: bucketName[0],
+                        etag: result.etag,
+                        versionId: result.versionId
+                    });
+
+                } catch (error) {
+                    logger.error('Error uploading file to MinIO:', error);
+                    
+                    // Clean up temp file in case of error
+                    if (uploadedFile?.filepath) {
+                        fs.unlink(uploadedFile.filepath, (unlinkErr) => {
+                            if (unlinkErr) logger.error('Error deleting temp file:', unlinkErr);
+                        });
+                    }
+
+                    res.status(500).json({ 
+                        message: 'Failed to upload file', 
+                        error: error.message 
+                    });
+                }
+            });
+
+        } catch (error) {
+            logger.error('Unexpected error in quickUploader:', error);
+            res.status(500).json({ 
+                message: 'Internal server error', 
+                error: error.message 
+            });
+        }
+    }
+
 }
 
 export default new UploadController();

@@ -117,6 +117,23 @@ class MinioService {
             throw error;
         }
     }
+
+    async putObject(bucket, objectName, data, size, metaData) {
+        try {
+            const result = await new Promise((resolve, reject) => {
+                minioClient.putObject(bucket, objectName, data, size, metaData, (err, res) => {
+                    if (err) return reject(err);
+                    resolve(res);
+                });
+            });
+
+            logger.info(`文件 ${objectName} 已上传至桶 ${bucket}`);
+            return result;
+        } catch (error) {
+            logger.error(`上传文件 ${objectName} 到桶 ${bucket} 时发生错误:`, error);
+            throw error;
+        }
+    }
 }
 
 export default new MinioService();

@@ -81,9 +81,14 @@ export const commentController = {
                   WHERE childComments.parent_comment_id = comments.comment_id
                 )`),
                 'SubReplyCount'
-              ]
-            ]
+              ],
+            ],
           },
+          include: [{
+              model: User,
+              as: 'user',
+              attributes: ['name']
+            }],
           limit,
           offset,
           order: [['created_at', 'ASC']],

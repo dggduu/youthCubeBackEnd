@@ -8,7 +8,7 @@ import { Likes } from '../config/Sequelize.js';
 import { Comments } from '../config/Sequelize.js';
 import { collections } from '../config/Sequelize.js';
 import { Op } from '../config/Sequelize.js';
-
+import logger from "../config/pino.js";
 import { getPagination, getPagingData } from '../utils/pagination.js';
 
 // 导出 postController 对象
@@ -20,9 +20,9 @@ export const postController = {
    */
   createPost: async (req, res) => {
     try {
-      const { title, content, cover_image_url, location, media, tagIds } = req.body;
-      const user_id = req.user.id;
-
+      const { title, content, cover_image_url,tagIds } = req.body;
+      const user_id = req.user.userId;
+      console.log(user_id,title,content,tagIds);
       if (!title || !content || !user_id) {
         return res.status(400).json({ message: 'Title, content, and user ID are required.' });
       }
@@ -32,24 +32,15 @@ export const postController = {
         title,
         content,
         cover_image_url,
-        location,
       });
-
-      if (media && media.length > 0) {
-        const mediaRecords = media.map(m => ({
-          post_id: newPost.post_id,
-          media_url: m.url,
-          media_type: m.type,
-          order_index: m.order,
-        }));
-        await PostMedia.bulkCreate(mediaRecords);
-      }
 
       // Handle tags
       if (tagIds && tagIds.length > 0) {
         const postTagRecords = tagIds.map(tag_id => ({
           post_id: newPost.post_id,
           tag_id: tag_id,
+          created_at: new Date(),
+          updated_at: new Date(),
         }));
         await PostTags.bulkCreate(postTagRecords);
       }
@@ -57,7 +48,6 @@ export const postController = {
       const populatedPost = await Posts.findByPk(newPost.post_id, {
         include: [
           { model: User, as: 'author', attributes: ['id', 'name', 'avatar_key'] },
-          { model: PostMedia, as: 'media', attributes: ['media_url', 'media_type', 'order_index'] },
           { model: tags, as: 'tags', attributes: ['tag_id', 'tag_name'], through: { attributes: [] } }
         ]
       });
@@ -141,7 +131,6 @@ export const postController = {
       const post = await Posts.findByPk(id, {
         include: [
           { model: User, as: 'author', attributes: ['id', 'name', 'avatar_key'] },
-          { model: PostMedia, as: 'media', attributes: ['media_id', 'media_url', 'media_type', 'order_index'] },
           { model: tags, as: 'tags', attributes: ['tag_id', 'tag_name'], through: { attributes: [] } },
           {
             model: Comments,
@@ -348,6 +337,223 @@ export const postController = {
     } catch (error) {
       console.error('Get like status error:', error);
       res.status(500).json({ message: 'Server error.', error: error.message });
+    }
+  },
+  /**
+  * @route POST /api/posts/:id/collect
+  * @desc 用户收藏一篇文章
+  * @access Private
+  */
+  collectPost: async (req, res) => {
+    try {
+      const { id: postId } = req.params;
+      const userId = req.user.userId;
+      // 检查是否已经收藏
+      const existingCollection = await collections.findOne({
+        where: { user_id: userId, post_id: postId }
+      });
+
+      if (existingCollection) {
+        return res.status(409).json({ message: '你已经收藏过这篇文章了' });
+      }
+
+      // 创建收藏记录
+      await collections.create({ user_id: userId, post_id: postId });
+
+      // 更新文章的收藏数 +1
+      await Posts.increment('collected_count', {
+        by: 1,
+        where: { post_id: postId },
+        silent: true
+      });
+
+      res.status(201).json({ message: '收藏成功' });
+    } catch (error) {
+      console.error('收藏文章失败:', error);
+      res.status(500).json({ message: '服务器错误', error: error.message });
+    }
+  },
+  /**
+   * @route DELETE /api/posts/:id/uncollect
+   * @desc 用户取消收藏一篇文章
+   * @access Private
+   */
+  uncollectPost: async (req, res) => {
+    try {
+      const { id: postId } = req.params;
+      const userId = req.user.userId;
+
+      // 查找收藏记录
+      const deleted = await collections.destroy({
+        where: { user_id: userId, post_id: postId }
+      });
+
+      if (!deleted) {
+        return res.status(404).json({ message: '你尚未收藏该文章' });
+      }
+
+      // 减少文章的收藏数 -1
+      await Posts.increment('collected_count', {
+        by: -1,
+        where: { post_id: postId },
+        silent: true
+      });
+
+      res.status(204).send();
+    } catch (error) {
+      console.error('取消收藏失败:', error);
+      res.status(500).json({ message: '服务器错误', error: error.message });
+    }
+  },
+  /**
+   * @route GET /api/posts/:id/collect/status
+   * @desc 获取当前用户对某篇文章的收藏状态
+   * @access Private
+   */
+  getCollectStatus: async (req, res) => {
+    try {
+      const { id: postId } = req.params;
+      const userId = req.user.userId;
+      // 查询是否已收藏
+      const collection = await collections.findOne({
+        where: { user_id: userId, post_id: postId }
+      });
+
+      // 查询文章本身（获取收藏总数）
+      const post = await Posts.findByPk(postId);
+      if (!post) {
+        return res.status(404).json({ message: '文章不存在' });
+      }
+
+      const collectedCount = post.collected_count || 0;
+
+      res.json({
+        collected: !!collection,
+        collectedCount
+      });
+    } catch (error) {
+      console.error('获取收藏状态失败:', error);
+      res.status(500).json({ message: '服务器错误', error: error.message });
+    }
+  },
+  /**
+   * @route GET /api/posts/collected
+   * @desc 获取当前用户收藏的所有文章
+   * @access Private
+   */
+  getCollectedPosts: async (req, res) => {
+    try {
+      const userId = req.user.userId;
+      const { page = 1, size = 10 } = req.query;
+      const { limit, offset } = getPagination(page, size);
+
+      // 获取分页的收藏记录及总数
+      const { count, rows: collectData } = await collections.findAndCountAll({
+        where: { user_id: userId },
+        include: [
+          {
+            model: Posts,
+            as: 'post',
+            include: [
+              { model: User, as: 'author', attributes: ['id', 'name', 'avatar_key'] },
+              { model: tags, as: 'tags', attributes: ['tag_id', 'tag_name'], through: { attributes: [] } },
+            ]
+          }
+        ],
+        order: [['created_at', 'DESC']],
+        limit,
+        offset
+      });
+
+      if (count === 0) {
+        return res.status(200).json({ 
+          data: [],
+          pagination: {
+            total: 0,
+            page: +page,
+            size: +size
+          },
+          message: '暂无收藏文章' 
+        });
+      }
+
+      const collectedPosts = collectData.map(collection => collection.post);
+      
+      res.status(200).json({
+        data: collectedPosts,
+        pagination: {
+          total: count,
+          page: +page,
+          size: +size,
+          totalPages: Math.ceil(count / size)
+        }
+      });
+
+    } catch (error) {
+      console.error('获取收藏文章错误:', error);
+      res.status(500).json({ 
+        message: '服务器错误',
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
+    }
+  },
+  getMyPosts: async (req, res) => {
+    try {
+      const { page = 0, size = 10, search, sortBy, order, tagId } = req.query;
+      const userId = req.user.userId;
+      const { limit, offset } = getPagination(page, size);
+
+      const whereCondition = { 
+        user_id: userId 
+      };
+
+      if (search) {
+        whereCondition[Op.or] = [
+          { title: { [Op.like]: `%${search}%` } },
+          { content: { [Op.like]: `%${search}%` } },
+          { location: { [Op.like]: `%${search}%` } }
+        ];
+      }
+
+      let orderClause = [['created_at', 'DESC']];
+      if (sortBy && ['views_count', 'likes_count', 'comments_count', 'collected_count', 'created_at'].includes(sortBy)) {
+        orderClause = [[sortBy, order?.toUpperCase() === 'ASC' ? 'ASC' : 'DESC']];
+      }
+
+      const includeOptions = [
+        { model: User, as: 'author', attributes: ['id', 'name', 'avatar_key'] },
+        { model: tags, as: 'tags', attributes: ['tag_id', 'tag_name'], through: { attributes: [] } }
+      ];
+
+      if (tagId) {
+        includeOptions.push({
+          model: tags,
+          as: 'tags',
+          where: { tag_id: tagId },
+          through: { attributes: [] },
+          required: true
+        });
+      }
+
+      const data = await Posts.findAndCountAll({
+        limit,
+        offset,
+        where: whereCondition,
+        include: includeOptions,
+        order: orderClause,
+        distinct: true,
+        col: 'post_id'
+      });
+
+      const response = getPagingData(data, page, limit);
+      res.status(200).json(response);
+
+    } catch (error) {
+      console.error('Get my posts error:', error);
+      res.status(500).json({ 
+        message: 'Server error.',
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
     }
   }
 };
