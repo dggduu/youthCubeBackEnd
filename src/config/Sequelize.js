@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 import logger from './pino.js';
 export { Op } from 'sequelize';
 
+// 导入模型
 import postsModel from '../models/posts.js';
 import commentsModel from '../models/comments.js';
 import likesModel from '../models/likes.js';
@@ -14,6 +15,13 @@ import postTagsModel from '../models/postTags.js';
 import tagsModel from '../models/tags.js';
 import teamsModel from '../models/teams.js';
 import userFollowsModel from '../models/userFollows.js';
+import chatRoomsModel from '../models/ChatRoom.js';
+import chatRoomMembersModel from '../models/ChatRoomMember.js';
+import messagesModel from '../models/Message.js';
+import teamTagsModel from '../models/TeamTag.js';
+import projectResultsModel from '../models/ProjectResult.js';
+import invitationModel from "../models/Invitation.js";
+import friendInvitationsModel from "../models/FriendInvitation.js";
 
 // 加载环境变量
 dotenv.config();
@@ -42,7 +50,15 @@ const PostTags = postTagsModel(sequelize, Sequelize);
 const tags = tagsModel(sequelize, Sequelize);
 const Team = teamsModel(sequelize, Sequelize);
 const UserFollows = userFollowsModel(sequelize, Sequelize);
+const ChatRoom = chatRoomsModel(sequelize, Sequelize);
+const ChatRoomMember = chatRoomMembersModel(sequelize, Sequelize);
+const Message = messagesModel(sequelize, Sequelize);
+const TeamTag = teamTagsModel(sequelize, Sequelize);
+const ProjectResult = projectResultsModel(sequelize, Sequelize);
+const Invitation = invitationModel(sequelize, Sequelize);
+const FriendInvitation = friendInvitationsModel(sequelize, Sequelize);
 
+// 建立模型关联
 User.hasMany(RefreshToken, { foreignKey: 'user_id', as: 'refreshTokens' });
 RefreshToken.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
 
@@ -52,7 +68,7 @@ User.belongsTo(Team, {
 });
 
 Team.hasMany(User, {
-  foreignKey: 'team_id', 
+  foreignKey: 'team_id',
   as: 'users',
 });
 
@@ -60,9 +76,38 @@ User.hasMany(Posts, { foreignKey: 'user_id', as: 'posts' });
 Posts.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
 
 UserFollows.belongsTo(User, { foreignKey: 'follower_id', as: 'follower' });
-
 UserFollows.belongsTo(User, { foreignKey: 'following_id', as: 'following' });
 
+Team.hasMany(ChatRoom, { foreignKey: 'team_id', as: 'chatRooms' });
+ChatRoom.belongsTo(Team, { foreignKey: 'team_id', as: 'team' });
+
+ChatRoom.hasMany(Message, { foreignKey: 'room_id', as: 'messages' });
+Message.belongsTo(ChatRoom, { foreignKey: 'room_id', as: 'chatRoom' });
+
+ChatRoom.hasMany(ChatRoomMember, { foreignKey: 'room_id', as: 'members' });
+ChatRoomMember.belongsTo(ChatRoom, { foreignKey: 'room_id', as: 'chatRoom' });
+
+ChatRoomMember.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
+
+Team.belongsToMany(tags, {
+  through: TeamTag,
+  foreignKey: 'team_id',
+  otherKey: 'tag_id',
+  as: 'tags'
+});
+tags.belongsToMany(Team, {
+  through: TeamTag,
+  foreignKey: 'tag_id',
+  otherKey: 'team_id',
+  as: 'teams'
+});
+
+Team.hasMany(ProjectResult, { foreignKey: 'team_id', as: 'projectResults' });
+ProjectResult.belongsTo(Team, { foreignKey: 'team_id', as: 'team' });
+
+ProjectResult.belongsTo(Posts, { foreignKey: 'post_id', as: 'post' });
+
+// 构建 db 对象
 const db = {
   sequelize,
   Sequelize,
@@ -77,6 +122,13 @@ const db = {
   tags,
   Team,
   UserFollows,
+  ChatRoom,
+  ChatRoomMember,
+  Message,
+  TeamTag,
+  ProjectResult,
+  Invitation,
+  FriendInvitation
 };
 
 Object.keys(db).forEach(modelName => {
@@ -85,6 +137,7 @@ Object.keys(db).forEach(modelName => {
   }
 });
 
+// 连接数据库
 const connectDB = async () => {
   try {
     await sequelize.authenticate();
@@ -109,5 +162,12 @@ export {
   tags,
   Team,
   UserFollows,
+  ChatRoom,
+  ChatRoomMember,
+  Message,
+  TeamTag,
+  ProjectResult,
+  Invitation,
+  FriendInvitation,
   connectDB,
 };

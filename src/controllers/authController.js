@@ -4,7 +4,7 @@ import { isValidEmail, isValidPassword, isValidDate } from '../utils/validator.j
 import { registerUser, authenticateUser, refreshAuthToken } from '../services/authService.js';
 import { sendVerificationEmail, pendingVerifications } from '../services/emailService.js';
 import logger from "../config/pino.js";
-
+import { User } from '../config/Sequelize.js'
 const emailVerification = async (req, res) => {
   const { email } = req.body;
   if (!email || !isValidEmail(email)) {
@@ -19,7 +19,6 @@ const emailVerification = async (req, res) => {
 
 const registerFuc = async (req, res) => {
   const { name, date, learnStage, email, code, pswd, sex, ava_url } = req.body;
-
   if (!name || !date || !learnStage || !email || !code || !pswd) {
     return res.status(400).json({ error: '缺少必要信息' });
   }
@@ -63,8 +62,6 @@ const registerFuc = async (req, res) => {
   pendingVerifications.delete(email);
 
   try {
-    // 假设 User 是通过 Sequelize 定义的模型，并已改为 ESM 导入
-    const { User } = await import('../models/index.js');
     const existingUser = await User.findOne({ where: { email } });
     if (existingUser) {
       return res.status(409).json({ error: '该邮箱已被注册' });

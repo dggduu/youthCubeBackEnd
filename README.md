@@ -1,8 +1,11 @@
-# 这是后端，技术栈Nodejs + express
+# youthCube 的后端服务（不公开sql文件）
 - [x] 邮件验证服务
 - [x] db 封装（Sequelize）
 - [x] 登录鉴权(jwt)
-- [ ] AI使用鉴权
-- [ ] Alioss鉴权(客户端上传，服务端验证)
-- [ ] 登出删除refresh_token
-- [ ] 社区内容上传
+- [x] minio鉴权(客户端上传，服务端验证)
+- [x] minio下载接口（分片+小文件上传）
+- [x] 登出删除refresh_token
+- [ ] 消息接口（socket.io）
+- [ ] 团队创建接口
+- [ ] 邀请接口
+- [ ] 注册时未同步jwt

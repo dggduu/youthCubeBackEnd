@@ -15,7 +15,7 @@ import PostRoutes from "./src/routes/PostRouter.js";
 import TagRoutes from "./src/routes/TagRoutes.js";
 import TeamRoutes from "./src/routes/TeamRoutes.js";
 import UserRoutes from "./src/routes/UserRoutes.js";
-
+import InviteRouters from "./src/routes/InvitationRouter.js";
 // 加载环境变量
 dotenv.config();
 
@@ -46,8 +46,9 @@ app.use('/v1', PostRoutes);
 app.use('/v1', TagRoutes);
 app.use('/v1', TeamRoutes);
 app.use('/v1', UserRoutes);
-app.use('/upload', uploadRoutes);
-app.use('/dl',downloadRoute);
+app.use('/v1/upload', uploadRoutes);
+app.use('/v1/dl',downloadRoute);
+app.use('/v1', InviteRouters);
 // 错误处理中间件
 app.use((err, req, res, next) => {
   logger.error('Server error:', err);

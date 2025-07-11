@@ -13,7 +13,7 @@ export const userController = {
    */
   getAllUsers: async (req, res) => {
     try {
-      const { page = 1, size = 10, name } = req.query;
+      const { page = 0, size = 10, name } = req.query;
       const { limit, offset } = getPagination(page, size);
 
       const whereCondition = name ? { name: { [Op.like]: `%${name}%` } } : {};
