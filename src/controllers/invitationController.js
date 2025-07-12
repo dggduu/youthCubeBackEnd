@@ -1,6 +1,6 @@
 import { Op } from '../config/Sequelize.js';
 import { getPagination, getPagingData } from '../utils/pagination.js';
-import { Invitation, Team, User, FriendInvitation, ChatRoomMember, UserFollows } from "../config/Sequelize.js";
+import { Invitation, Team, User, FriendInvitation, ChatRoomMember, UserFollows, ChatRoom } from "../config/Sequelize.js";
 
 export const invitationController = {
   /**
@@ -176,40 +176,93 @@ export const invitationController = {
    * @access Private
    */
   acceptTeamInvitation: async (req, res) => {
+    const transaction = await Invitation.sequelize.transaction(); // 使用事务保证一致性
     try {
       const currentUserId = req.user.userId;
       const invitationId = req.params.id;
 
-      const invitation = await Invitation.findByPk(invitationId);
+      // 查找邀请记录
+      const invitation = await Invitation.findByPk(invitationId, {
+        transaction,
+      });
 
       if (!invitation || invitation.user_id !== currentUserId) {
-        return res.status(404).json({ message: 'Invitation not found.' });
+        return res.status(404).json({ message: '邀请不存在或无权操作。' });
       }
 
       if (invitation.expires_at < new Date()) {
         invitation.status = 'expired';
-        await invitation.save();
-        return res.status(400).json({ message: 'Invitation has expired.' });
+        await invitation.save({ transaction });
+        return res.status(400).json({ message: '邀请已过期。' });
       }
 
       if (invitation.status !== 'pending') {
-        return res.status(400).json({ message: 'Invitation is not pending.' });
+        return res.status(400).json({ message: '邀请状态不为 pending。' });
       }
 
-      // 加入聊天室逻辑（示例 room_id 同 team_id）
-      await ChatRoomMember.create({
-        room_id: Team.team_id,
-        user_id: currentUserId,
-        role: 'member'
+      // 获取邀请者的ID（发送邀请的人）
+      const inviterId = invitation.invited_by;
+
+      // 根据 team_id 查询 chat_room
+      const chatRoom = await ChatRoom.findOne({
+        where: {
+          team_id: invitation.team_id,
+        },
+        transaction,
       });
 
-      invitation.status = 'accepted';
-      await invitation.save();
+      if (!chatRoom) {
+        return res.status(404).json({ message: '未找到该队伍的聊天室:',teamId:invitation.team_id });
+      }
 
-      return res.json(invitation);
+      const roomId = chatRoom.room_id;
+
+      // 检查邀请者是否有权限（是否为 owner 或 co_owner）
+      const inviterRole = await ChatRoomMember.findOne({
+        where: {
+          room_id: roomId,
+          user_id: inviterId,
+        },
+        attributes: ['role'],
+        transaction,
+      });
+
+      if (!inviterRole || !['owner', 'co_owner'].includes(inviterRole.role)) {
+        return res.status(403).json({ message: '您没有权限邀请他人加入。' });
+      }
+
+      // 检查当前用户是否已经是成员
+      const existingMember = await ChatRoomMember.findOne({
+        where: {
+          room_id: roomId,
+          user_id: currentUserId,
+        },
+        transaction,
+      });
+
+      if (existingMember) {
+        return res.status(409).json({ message: '您已是该聊天室成员。' });
+      }
+
+      // 将用户加入聊天室，默认角色为 member
+      await ChatRoomMember.create({
+        room_id: roomId,
+        user_id: currentUserId,
+        role: 'member',
+      }, { transaction });
+
+      // 更新邀请状态为 accepted
+      invitation.status = 'accepted';
+      await invitation.save({ transaction });
+
+      // 提交事务
+      await transaction.commit();
+
+      return res.json({ message: '成功加入队伍和聊天室。' });
     } catch (error) {
-      console.error('Error accepting team invitation:', error);
-      return res.status(500).json({ message: 'Internal server error.' });
+      await transaction.rollback();
+      console.error('接受邀请时出错:', error);
+      return res.status(500).json({ message: '服务器内部错误。', error: error.message });
     }
   },
 

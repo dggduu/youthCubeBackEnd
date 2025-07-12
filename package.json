@@ -10,6 +10,7 @@
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.2",
     "minio": "^8.0.5",
+    "mint-filter": "^4.0.3",
     "morgan": "^1.10.0",
     "multer": "^2.0.1",
     "mysql2": "^3.14.1",

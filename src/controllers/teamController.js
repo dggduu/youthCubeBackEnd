@@ -1,4 +1,4 @@
-import { Team, TeamTag, tags } from '../config/Sequelize.js';
+import { Team, TeamTag, tags, ChatRoom, ChatRoomMember } from '../config/Sequelize.js';
 import { Op } from '../config/Sequelize.js';
 
 
@@ -7,28 +7,47 @@ import { getPagination, getPagingData } from '../utils/pagination.js';
 export const teamController = {
   /**
    * @route POST /api/teams
-   * @desc Create a new team
-   * @access Private (Admin or specific role)
+   * @desc Create a new team and its corresponding chat room
+   * @access Private
    */
   createTeam: async (req, res) => {
+    const transaction = await Team.sequelize.transaction();
+    const user_id = req.user.userId;
+
     try {
-      const { team_name, description, tagIds } = req.body;
+      const { team_name, description, tagIds, is_public, grade } = req.body;
 
       if (!team_name) {
         return res.status(400).json({ message: '需要队伍名称' });
       }
 
-      // 检查队名是否已存在
-      const existingTeam = await Team.findOne({ where: { team_name } });
-      if (existingTeam) {
-        return res.status(409).json({ message: '存在相同的队名' });
+      // 校验 is_public 是否为布尔值
+      if (typeof is_public !== 'undefined' && ![0, 1].includes(Number(is_public))) {
+        return res.status(400).json({ message: 'is_public 必须是 0 或 1' });
       }
 
       // 创建队伍
       const newTeam = await Team.create({
         team_name,
         description,
-      });
+        is_public: Number(is_public),
+        grade,
+      }, { transaction });
+
+      // 创建聊天室
+      const chatRoomName = `${newTeam.team_name} 聊天室`;
+      const chatRoom = await ChatRoom.create({
+        type: 'team',
+        name: chatRoomName,
+        team_id: newTeam.team_id
+      }, { transaction });
+
+      // 设置当前用户为该聊天室的 owner
+      await ChatRoomMember.create({
+        room_id: chatRoom.room_id,
+        user_id: user_id,
+        role: 'owner'
+      }, { transaction });
 
       // 如果有 tags，写入中间表 team_tags
       if (tagIds && Array.isArray(tagIds) && tagIds.length > 0) {
@@ -38,24 +57,16 @@ export const teamController = {
           created_at: new Date(),
           updated_at: new Date()
         }));
-        await TeamTag.bulkCreate(teamTagRecords);
+        await TeamTag.bulkCreate(teamTagRecords, { transaction });
       }
 
-      // 查询完整数据（包含 tags）
-      const populatedTeam = await Team.findByPk(newTeam.team_id, {
-        include: [
-          {
-            model: tags,
-            as: 'tags',
-            attributes: ['tag_id', 'tag_name'],
-            through: { attributes: [] }
-          }
-        ]
-      });
+      // 提交事务
+      await transaction.commit();
 
-      res.status(201).json({ message: '队伍成功创建', team: populatedTeam });
+      res.status(201).json({ message: '队伍和聊天室成功创建' });
     } catch (error) {
-      console.error('创建队伍时遇到问题:', error);
+      await transaction.rollback(); // 出错回滚
+      console.error('创建队伍和聊天室时遇到问题:', error);
       res.status(500).json({ message: '内部错误：', error: error.message });
     }
   },
@@ -112,7 +123,6 @@ export const teamController = {
       const { id } = req.params;
 
       const team = await Team.findByPk(id, {
-        attributes: { exclude: ['description'] },
         include: [{
           model: tags,
           as: 'tags',
