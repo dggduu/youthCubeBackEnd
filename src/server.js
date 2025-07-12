@@ -60,27 +60,7 @@ app.use('/v1/upload', uploadRoutes);
 app.use('/v1/dl', downloadRoute);
 app.use('/v1', InviteRouters);
 app.use("/v1", ChatRoomRouters);
-app.post("/test", (req, res) => {
-  try {
-    const { message } = req.body;
-    const filter = getFilter();
 
-    const { words: forbiddenWords } = filter.filter(message, { replace: false });
-    
-    if (forbiddenWords.length > 0) {
-      return res.status(200).json({
-        containsSensitiveWords: true,
-        forbiddenWords,
-        firstWord: forbiddenWords[0]
-      });
-    }
-
-    return res.json({ containsSensitiveWords: false });
-  } catch (e) {
-    logger.error('检测异常:', e);
-    return res.status(500).json({ error: '检测服务异常' });
-  }
-});
 // 错误处理中间件
 app.use((err, req, res, next) => {
   logger.error('Server error:', err);
