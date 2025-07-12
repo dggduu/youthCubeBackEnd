@@ -250,6 +250,14 @@ export const invitationController = {
         user_id: currentUserId,
         role: 'member',
       }, { transaction });
+      // 添加team_id到user表
+      await User.update(
+        { team_id: invitation.team_id },
+        { 
+          where: { id: currentUserId },
+          transaction 
+        }
+      );
 
       // 更新邀请状态为 accepted
       invitation.status = 'accepted';

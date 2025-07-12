@@ -39,7 +39,7 @@ export const chatRoomController = {
       return res.json({ message: '聊天室名称已更新', chatRoom });
     } catch (error) {
       logger.error('更新聊天室名称失败:', error);
-      console.error('完整错误堆栈:', error.stack); // 打印堆栈
+      console.error('完整错误堆栈:', error.stack);
       return res.status(500).json({ message: '服务器内部错误' });
     }
   },
@@ -188,5 +188,47 @@ export const chatRoomController = {
       logger.error('转让队长权限失败:', error);
       return res.status(500).json({ message: '服务器内部错误' });
     }
-  }
+  },
+    createPrivateChat: async (req, res) => {
+        const userId = req.user.userId;
+        const { targetUserId } = req.body;
+
+        if (!targetUserId || typeof targetUserId !== 'number') {
+        return res.status(400).json({ message: '请提供有效的目标用户ID' });
+        }
+
+        if (userId === targetUserId) {
+        return res.status(400).json({ message: '不能与自己私聊' });
+        }
+
+        try {
+        const chatRoom = await ChatRoom.create({
+            type: 'private',
+            name: `用户${userId}和用户${targetUserId}`,
+            created_at: new Date()
+        });
+
+        await ChatRoomMember.bulkCreate([
+            {
+            room_id: chatRoom.room_id,
+            user_id: userId,
+            role: 'member'
+            },
+            {
+            room_id: chatRoom.room_id,
+            user_id: targetUserId,
+            role: 'member'
+            }
+        ]);
+
+        return res.status(201).json({
+            message: '私聊聊天室已创建',
+            chatRoomId: chatRoom.room_id,
+            users: [userId, targetUserId]
+        });
+        } catch (error) {
+        logger.error('创建私聊失败:', error);
+        return res.status(500).json({ message: '服务器内部错误' });
+        }
+    }
 };

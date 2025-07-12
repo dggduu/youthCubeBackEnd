@@ -5,8 +5,11 @@
 - [x] minio鉴权(客户端上传，服务端验证)
 - [x] minio下载接口（分片+小文件上传）
 - [x] 登出删除refresh_token
-- [ ] 消息接口（socket.io）+ 服务器存储/asyncStorage
+- [ ] 消息接口（socket.IO）+ 服务器存储/asyncStorage
 - [x] 团队创建接口
-- [ ] 邀请接口
+- [x] 邀请接口
 - [ ] 注册时未同步jwt
-- [ ] 敏感词检测(AC自动机)
+- [ ] 敏感词检测
+
+# SpecialThanks
+- mint-filter : https://www.npmjs.com/package/mint-filter
