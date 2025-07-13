@@ -52,6 +52,17 @@ export default (sequelize) => {
     timestamps: false,
     tableName: 'teams',
   });
+  Team.associate = function(models) {
+    Team.hasMany(models.ChatRoomMember, {
+      foreignKey: 'room_id',
+      as: 'members'
+    });
+
+    Team.hasOne(models.ChatRoom, {
+      foreignKey: 'team_id',
+      as: 'chatRoom'
+    });
+  };
 
   return Team;
 };

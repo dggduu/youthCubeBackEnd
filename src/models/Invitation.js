@@ -24,6 +24,10 @@ export default (sequelize) => {
       type: DataTypes.STRING(255),
       allowNull: true,
     },
+    description:{
+      type: DataTypes.TEXT,
+      allowNull: false,
+    },
     status: {
       type: DataTypes.ENUM('pending', 'accepted', 'rejected', 'expired'),
       defaultValue: 'pending',

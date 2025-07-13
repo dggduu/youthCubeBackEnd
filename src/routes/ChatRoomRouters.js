@@ -8,5 +8,11 @@ const router = express.Router();
 router.put('/api/chatrooms/:room_id/update', authenticateToken, chatRoomController.updateChatRoomName);
 router.put('/api/chatrooms/:room_id/members/:user_id/role', authenticateToken, chatRoomController.updateChatRoomMemberRole);
 router.post('/api/chatrooms/:room_id/transfer-owner', authenticateToken, chatRoomController.transferOwner);
+
 router.post('/api/chatrooms/private', authenticateToken, chatRoomController.createPrivateChat);
+router.get('/api/chatrooms/private', authenticateToken, chatRoomController.listPrivateChatRooms);
+//获取room_id
+router.get('/api/chatrooms/team/:team_id', authenticateToken, chatRoomController.getTeamChatRoom);
+router.get('/api/chatrooms/private/:targetUserId', authenticateToken, chatRoomController.getPrivateChatRoom);
+
 export default router;

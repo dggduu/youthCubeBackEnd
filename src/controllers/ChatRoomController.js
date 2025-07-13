@@ -1,7 +1,7 @@
 import { ChatRoom } from '../config/Sequelize.js';
-import { ChatRoomMember } from '../config/Sequelize.js';
+import { ChatRoomMember, PrivateChat, UserFollows, Op, User, Message, sequelize } from '../config/Sequelize.js';
 import logger from "../config/pino.js";
-
+import { getPagination, getPagingData } from "../utils/pagination.js";
 export const chatRoomController = {
   /**
    * @route PUT /api/chatrooms/:room_id
@@ -189,46 +189,251 @@ export const chatRoomController = {
       return res.status(500).json({ message: '服务器内部错误' });
     }
   },
-    createPrivateChat: async (req, res) => {
-        const userId = req.user.userId;
-        const { targetUserId } = req.body;
+  createPrivateChat: async (req, res) => {
+      const userId = req.user.userId;
+      const { targetUserId } = req.body;
 
-        if (!targetUserId || typeof targetUserId !== 'number') {
-        return res.status(400).json({ message: '请提供有效的目标用户ID' });
-        }
+      if (!targetUserId || typeof targetUserId !== 'number') {
+          return res.status(400).json({ message: '请提供有效的目标用户ID' });
+      }
 
-        if (userId === targetUserId) {
-        return res.status(400).json({ message: '不能与自己私聊' });
-        }
+      if (userId === targetUserId) {
+          return res.status(400).json({ message: '不能与自己私聊' });
+      }
 
-        try {
-        const chatRoom = await ChatRoom.create({
-            type: 'private',
-            name: `用户${userId}和用户${targetUserId}`,
-            created_at: new Date()
-        });
+      // 确保 user1_id < user2_id
+      const user1_id = Math.min(userId, targetUserId);
+      const user2_id = Math.max(userId, targetUserId);
 
-        await ChatRoomMember.bulkCreate([
-            {
-            room_id: chatRoom.room_id,
-            user_id: userId,
-            role: 'member'
+      try {
+          const existingPrivateChat = await PrivateChat.findOne({
+              where: { user1_id, user2_id }
+          });
+
+          if (existingPrivateChat) {
+              // 已有私聊房间，直接返回
+              return res.status(200).json({
+                  message: '私聊房间已存在',
+                  chatRoomId: existingPrivateChat.room_id,
+                  users: [user1_id, user2_id]
+              });
+          }
+
+          // 2创建聊天室
+          const chatRoom = await ChatRoom.create({
+              type: 'private',
+              name: `私聊_${user1_id}_和_${user2_id}`,
+              created_at: new Date()
+          });
+
+          const roomId = chatRoom.room_id;
+
+          // 添加两个用户到聊天室成员表
+          await ChatRoomMember.bulkCreate([
+              {
+                  room_id: roomId,
+                  user_id: user1_id,
+                  role: 'member'
+              },
+              {
+                  room_id: roomId,
+                  user_id: user2_id,
+                  role: 'member'
+              }
+          ]);
+
+          // 插入私聊映射表
+          await PrivateChat.create({
+              user1_id,
+              user2_id,
+              room_id: roomId
+          });
+
+          return res.status(201).json({
+              message: '私聊聊天室已创建',
+              chatRoomId: roomId,
+              users: [user1_id, user2_id]
+          });
+
+      } catch (error) {
+          logger.error('创建私聊失败:', error);
+          return res.status(500).json({ message: '服务器内部错误' });
+      }
+  },
+  getTeamChatRoom: async (req, res) => {
+      const { team_id } = req.params;
+
+      if (!team_id || isNaN(team_id)) {
+          return res.status(400).json({ message: '请提供有效的团队ID' });
+      }
+
+      try {
+          const teamChatRoom = await ChatRoom.findOne({
+              where: { 
+                  team_id: parseInt(team_id),
+                  type: 'team' 
+              }
+          });
+
+          if (!teamChatRoom) {
+              return res.status(404).json({ message: '未找到该团队的聊天室' });
+          }
+
+          return res.status(200).json({
+              message: '成功获取团队聊天室',
+              chatRoomId: teamChatRoom.room_id,
+              teamId: teamChatRoom.team_id,
+              name: teamChatRoom.name
+          });
+
+      } catch (error) {
+          logger.error('获取团队聊天室失败:', error);
+          return res.status(500).json({ message: '服务器内部错误' });
+      }
+  },
+
+  getPrivateChatRoom: async (req, res) => {
+      const userId = req.user.userId;
+      const { targetUserId } = req.params;
+
+      if (!targetUserId || isNaN(targetUserId)) {
+          return res.status(400).json({ message: '请提供有效的目标用户ID' });
+      }
+
+      if (userId === parseInt(targetUserId)) {
+          return res.status(400).json({ message: '不能与自己私聊' });
+      }
+
+      // 确保 user1_id < user2_id
+      const user1_id = Math.min(userId, parseInt(targetUserId));
+      const user2_id = Math.max(userId, parseInt(targetUserId));
+
+      try {
+          const existingPrivateChat = await PrivateChat.findOne({
+              where: { user1_id, user2_id }
+          });
+
+          if (!existingPrivateChat) {
+              return res.status(404).json({ message: '未找到私聊房间' });
+          }
+
+          // 获取聊天室详细信息
+          const chatRoom = await ChatRoom.findByPk(existingPrivateChat.room_id);
+
+          return res.status(200).json({
+              message: '成功获取私聊房间',
+              chatRoomId: existingPrivateChat.room_id,
+              users: [user1_id, user2_id],
+              name: chatRoom.name,
+              createdAt: chatRoom.created_at
+          });
+
+      } catch (error) {
+          logger.error('获取私聊房间失败:', error);
+          return res.status(500).json({ message: '服务器内部错误' });
+      }
+  },
+listPrivateChatRooms: async (req, res) => {
+    const userId = req.user.userId;
+    const { page = 0, size = 10 } = req.query;
+    
+    try {
+        const { limit, offset } = getPagination(page, size);
+        
+        const privateChats = await PrivateChat.findAndCountAll({
+            where: {
+                [Op.or]: [
+                    { user1_id: userId },
+                    { user2_id: userId }
+                ]
             },
-            {
-            room_id: chatRoom.room_id,
-            user_id: targetUserId,
-            role: 'member'
-            }
-        ]);
-
-        return res.status(201).json({
-            message: '私聊聊天室已创建',
-            chatRoomId: chatRoom.room_id,
-            users: [userId, targetUserId]
+            include: [
+                {
+                    model: User,
+                    as: 'PrivateChatUser1',
+                    attributes: ['id', 'name', 'avatar_key']
+                },
+                {
+                    model: User,
+                    as: 'PrivateChatUser2',
+                    attributes: ['id', 'name', 'avatar_key']
+                },
+                {
+                    model: ChatRoom,
+                    as: 'PrivateChatRoom',
+                    attributes: ['room_id', 'updated_at']
+                }
+            ],
+            limit,
+            offset,
+            order: [
+                [{ model: ChatRoom, as: 'PrivateChatRoom' }, 'updated_at', 'DESC']
+            ]
         });
-        } catch (error) {
-        logger.error('创建私聊失败:', error);
-        return res.status(500).json({ message: '服务器内部错误' });
-        }
+
+        const roomIds = privateChats.rows.map(chat => chat.PrivateChatRoom.room_id);
+        
+        const lastMessages = await Message.findAll({
+            where: {
+                room_id: roomIds
+            },
+            attributes: [
+                'room_id',
+                [sequelize.fn('MAX', sequelize.col('timestamp')), 'latest_timestamp']
+            ],
+            group: ['room_id'],
+            raw: true
+        });
+
+        const latestMessages = await Message.findAll({
+            where: {
+                [Op.and]: lastMessages.map(msg => ({
+                    room_id: msg.room_id,
+                    timestamp: msg.latest_timestamp
+                }))
+            },
+            attributes: ['room_id', 'content', 'timestamp'],
+            raw: true
+        });
+
+        const results = await Promise.all(privateChats.rows.map(async (chat) => {
+            const otherUser = chat.user1_id === userId ? chat.PrivateChatUser2 : chat.PrivateChatUser1;
+            const roomInfo = chat.PrivateChatRoom;
+            
+            const followStatus = await UserFollows.findOne({
+                where: {
+                    follower_id: userId,
+                    following_id: otherUser.id
+                }
+            });
+
+            const lastMessage = latestMessages.find(msg => msg.room_id === roomInfo.room_id);
+
+            return {
+                room_id: roomInfo.room_id,
+                other_user: {
+                    id: otherUser.id,
+                    name: otherUser.name,
+                    avatar: otherUser.avatar_key,
+                    is_following: !!followStatus
+                },
+                last_message: lastMessage?.content || null,
+                updated_at: roomInfo.updated_at
+            };
+        }));
+
+        const response = getPagingData({
+            count: privateChats.count,
+            rows: results
+        }, page, limit);
+
+        res.status(200).json(response);
+    } catch (error) {
+        console.error('Error listing private chat rooms:', error);
+        res.status(500).json({ 
+            message: 'Failed to list private chat rooms',
+            error: error.message
+        });
     }
+}
 };

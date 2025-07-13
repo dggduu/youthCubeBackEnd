@@ -26,6 +26,16 @@ export default (sequelize) => {
     timestamps: false,
     tableName: 'chat_room_members',
   });
-
+  ChatRoomMember.associate = function(models) {
+    ChatRoomMember.belongsTo(models.Team, {
+      foreignKey: 'room_id',
+      as: 'team'
+    });
+    
+    ChatRoomMember.belongsTo(models.User, {
+      foreignKey: 'user_id',
+      as: 'member'
+    });
+  };
   return ChatRoomMember;
 };

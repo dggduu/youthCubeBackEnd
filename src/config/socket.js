@@ -18,15 +18,19 @@ export function setupSocketIO(server) {
 
   io.use(async (socket, next) => {
     try {
-      const token = socket.handshake.auth.token;
-      const room_id = socket.handshake.auth.room_id;
-
+      console.log(socket.handshake);
+      // const token = socket.handshake.auth.token;
+      // const room_id = socket.handshake.auth.room_id;
+      const token = socket.handshake.query.token;
+      const room_id = socket.handshake.query.room_id;
+      
       if (!token || !room_id) {
         return next(new Error('缺少 token 或 room_id'));
       }
 
       // 解析 JWT
       const decoded = await promisify(jwt.verify)(token, JWT_SECRET);
+      console.log(decoded);
       const userId = decoded.userId;
 
       // 将解析结果挂载到 socket 上供后续使用

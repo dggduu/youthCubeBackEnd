@@ -22,6 +22,7 @@ import teamTagsModel from '../models/TeamTag.js';
 import projectResultsModel from '../models/ProjectResult.js';
 import invitationModel from "../models/Invitation.js";
 import friendInvitationsModel from "../models/FriendInvitation.js";
+import PrivateChatModel from '../models/PrivateChat.js';
 
 // 加载环境变量
 dotenv.config();
@@ -57,6 +58,7 @@ const TeamTag = teamTagsModel(sequelize, Sequelize);
 const ProjectResult = projectResultsModel(sequelize, Sequelize);
 const Invitation = invitationModel(sequelize, Sequelize);
 const FriendInvitation = friendInvitationsModel(sequelize, Sequelize);
+const PrivateChat = PrivateChatModel(sequelize, Sequelize);
 
 // 建立模型关联
 User.hasMany(RefreshToken, { foreignKey: 'user_id', as: 'refreshTokens' });
@@ -89,6 +91,7 @@ ChatRoomMember.belongsTo(ChatRoom, { foreignKey: 'room_id', as: 'chatRoom' });
 
 ChatRoomMember.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
 
+
 Team.belongsToMany(tags, {
   through: TeamTag,
   foreignKey: 'team_id',
@@ -101,6 +104,7 @@ tags.belongsToMany(Team, {
   otherKey: 'team_id',
   as: 'teams'
 });
+
 
 Team.hasMany(ProjectResult, { foreignKey: 'team_id', as: 'projectResults' });
 ProjectResult.belongsTo(Team, { foreignKey: 'team_id', as: 'team' });
@@ -128,7 +132,8 @@ const db = {
   TeamTag,
   ProjectResult,
   Invitation,
-  FriendInvitation
+  FriendInvitation,
+  PrivateChat
 };
 
 Object.keys(db).forEach(modelName => {
@@ -169,5 +174,6 @@ export {
   ProjectResult,
   Invitation,
   FriendInvitation,
+  PrivateChat,
   connectDB,
 };

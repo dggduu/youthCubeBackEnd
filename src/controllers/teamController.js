@@ -1,5 +1,5 @@
-import { Team, TeamTag, tags, ChatRoom, ChatRoomMember } from '../config/Sequelize.js';
-import { Op } from '../config/Sequelize.js';
+import { Team, TeamTag, tags, ChatRoom, ChatRoomMember,ProjectResult, User } from '../config/Sequelize.js';
+import { Op, sequelize } from '../config/Sequelize.js';
 
 
 import { getPagination, getPagingData } from '../utils/pagination.js';
@@ -76,12 +76,16 @@ export const teamController = {
    * @desc Get all teams with pagination and search
    * @access Public
    */
-  getAllTeams : async (req, res) => {
+  getAllTeams: async (req, res) => {
     try {
       const { page, size, search } = req.query;
       const { limit, offset } = getPagination(page, size);
 
-      const whereCondition = search ? { team_name: { [Op.like]: `%${search}%` } } : {};
+      // 构建 where 查询条件：仅查询 is_public = 1 的团队
+      const whereCondition = {
+        is_public: 1,
+        ...(search && { team_name: { [Op.like]: `%${search}%` } }),
+      };
 
       const data = await Team.findAndCountAll({
         attributes: { exclude: ['description'] },
@@ -123,19 +127,62 @@ export const teamController = {
       const { id } = req.params;
 
       const team = await Team.findByPk(id, {
-        include: [{
-          model: tags,
-          as: 'tags',
-          attributes: ['tag_id', 'tag_name'],
-          through: { attributes: [] }
-        }]
+        include: [
+          {
+            model: tags,
+            as: 'tags',
+            attributes: ['tag_id', 'tag_name'],
+            through: { attributes: [] }
+          },
+          {
+            model: ProjectResult,
+            as: 'projectResults',
+            required: false,
+            attributes: [
+              'result_id',
+              'team_id',
+              'type',
+              'is_completed',
+              'completed_at',
+              [sequelize.literal(`CASE WHEN projectResults.type = 'article' THEN projectResults.post_id ELSE NULL END`), 'post_id']
+            ],
+            where: { is_completed: true }
+          },
+          {
+            model: ChatRoom,
+            as: 'chatRoom',
+            attributes: ['room_id'],
+            include: [{
+              model: ChatRoomMember,
+              as: 'members',
+              attributes: ['user_id', 'role', 'joined_at'],
+              include: [{
+                model: User,
+                as: 'member',
+                attributes: ['id', 'name', 'avatar_key']
+              }]
+            }]
+          }
+        ]
       });
 
       if (!team) {
         return res.status(404).json({ message: 'Team not found.' });
       }
 
-      res.status(200).json(team);
+      const teamData = team.get({ plain: true });
+
+      if (teamData.chatRoom?.members) {
+        teamData.chatRoom.members = teamData.chatRoom.members.map(member => ({
+          user_id: member.user_id,
+          name: member.member?.name,
+          avatar: member.member?.avatar_key,
+          role: member.role,
+          joined_at: member.joined_at
+        }));
+      }
+
+      res.status(200).json(teamData);
     } catch (error) {
       console.error('Get team by ID error:', error);
       res.status(500).json({ message: 'Server error.', error: error.message });

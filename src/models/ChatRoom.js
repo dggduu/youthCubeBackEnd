@@ -26,9 +26,24 @@ export default (sequelize) => {
       defaultValue: sequelize.literal("CURRENT_TIMESTAMP")
     }
   }, {
-    timestamps: false,
+    timestamps: true,
+    updatedAt: 'updated_at',
+    createdAt: 'created_at',
     tableName: 'chat_rooms',
   });
+
+  ChatRoom.associate = function(models) {
+      ChatRoom.hasMany(models.Message, {
+          foreignKey: 'room_id',
+          as: 'all_messages'
+      });
+      
+      ChatRoom.hasOne(models.Message, {
+          foreignKey: 'room_id',
+          as: 'last_message',
+          order: [['timestamp', 'DESC']]
+      });
+  };
 
   return ChatRoom;
 };

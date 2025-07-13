@@ -4,9 +4,10 @@ const router = express.Router();
 import { invitationController } from '../controllers/invitationController.js';
 import authenticateToken from "../middleware/authMiddleware.js";
 // 获取当前用户所有的邀请
-router.get('/api/invite/team',authenticateToken, invitationController.getTeamInvitations);     // 获取队伍邀请
-router.get('/api/invite/friend', authenticateToken, invitationController.getFriendInvitations); // 获取好友邀请
+router.get('/api/invite/team',authenticateToken, invitationController.getMyTeamInvitations);     // 获取队伍邀请
+router.get('/api/invite/friend', authenticateToken, invitationController.getMyFriendInvitations); // 获取好友邀请
 
+router.get('/api/invite/:teamId', authenticateToken, invitationController.getTeamInvitations);
 //发送邀请
 router.post('/api/invite/team', authenticateToken, invitationController.inviteToTeam);          // 邀请加入队伍
 router.post('/api/invite/friend', authenticateToken, invitationController.inviteAsFriend);      // 邀请添加好友

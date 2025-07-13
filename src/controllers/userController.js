@@ -207,7 +207,7 @@ export const userController = {
   getUserFollowers: async (req, res) => {
     try {
       const { id } = req.params;
-      const { page = 1, size = 10 } = req.query;
+      const { page = 0, size = 10 } = req.query;
       const { limit, offset } = getPagination(page, size);
 
       const data = await UserFollows.findAndCountAll({
@@ -238,7 +238,7 @@ export const userController = {
   getUserFollowing: async (req, res) => {
     try {
       const { id } = req.params;
-      const { page = 1, size = 10 } = req.query;
+      const { page = 0, size = 10 } = req.query;
       const { limit, offset } = getPagination(page, size);
 
       const data = await UserFollows.findAndCountAll({
