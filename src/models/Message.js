@@ -23,7 +23,7 @@ export default (sequelize) => {
     timestamp: {
       type: DataTypes.DATE,
       allowNull: false,
-      defaultValue: sequelize.literal("CURRENT_TIMESTAMP")
+      defaultValue: sequelize.fn('NOW'),
     },
     is_read: {
       type: DataTypes.BOOLEAN,
