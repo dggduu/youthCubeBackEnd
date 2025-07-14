@@ -14,5 +14,7 @@ router.get('/api/chatrooms/private', authenticateToken, chatRoomController.listP
 //获取room_id
 router.get('/api/chatrooms/team/:team_id', authenticateToken, chatRoomController.getTeamChatRoom);
 router.get('/api/chatrooms/private/:targetUserId', authenticateToken, chatRoomController.getPrivateChatRoom);
+router.get('/api/chatrooms/history/:room_id', authenticateToken, chatRoomController.getChatRoomMessages);
+
 
 export default router;

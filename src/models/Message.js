@@ -33,6 +33,11 @@ export default (sequelize) => {
     timestamps: false,
     tableName: 'messages',
   });
-
+  Message.associate = function(models) {
+    Message.belongsTo(models.User, {
+      foreignKey: 'sender_id',
+      as: 'sender'
+    });
+  };
   return Message;
 };

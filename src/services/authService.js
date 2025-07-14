@@ -83,9 +83,8 @@ async function authenticateUser(email, password) {
 /**
  * 刷新访问令牌
  */
-async function refreshAuthToken(oldRefreshToken) {
+const refreshAuthToken = async (oldRefreshToken) => {
   try {
-    // 验证刷新密钥
     const decoded = jwt.verify(oldRefreshToken, process.env.JWT_REFRESH_SECRET);
 
     const storedRefreshToken = await RefreshToken.findOne({
@@ -99,19 +98,28 @@ async function refreshAuthToken(oldRefreshToken) {
       throw new Error('刷新密钥不存在');
     }
 
-    // 生成新 token
+    // 检查是否已过期
+    if (new Date() > new Date(storedRefreshToken.expires_at)) {
+      await storedRefreshToken.destroy();
+      throw new Error('刷新令牌已过期，请重新登录。');
+    }
+
+    // 生成新的 token
     const newAccessToken = generateAccessToken({ userId: decoded.userId, email: decoded.email });
-
     const newRefreshToken = generateRefreshToken({ userId: decoded.userId });
-    const decodedNewRefreshToken = jwt.decode(newRefreshToken);
 
+    const decodedNewRefreshToken = jwt.decode(newRefreshToken);
     if (!decodedNewRefreshToken || !decodedNewRefreshToken.exp) {
       throw new Error('生成刷新密钥时出现错误');
     }
 
     const newExpiresAt = new Date(decodedNewRefreshToken.exp * 1000);
 
-    await storedRefreshToken.update({
+    // 删除旧 token，插入新 token
+    await storedRefreshToken.destroy();
+
+    await RefreshToken.create({
+      user_id: decoded.userId,
       refresh_token: newRefreshToken,
       expires_at: newExpiresAt,
     });
@@ -122,15 +130,21 @@ async function refreshAuthToken(oldRefreshToken) {
     };
 
   } catch (error) {
+    logger.error('刷新 token 失败:', {
+      error: error.message,
+      stack: error.stack,
+    });
+
     if (error instanceof jwt.TokenExpiredError) {
       throw new Error('刷新令牌已过期，请重新登录。');
     }
     if (error instanceof jwt.JsonWebTokenError) {
       throw new Error('刷新令牌无效，请重新登录。');
     }
+
     throw new Error('服务器错误，无法刷新令牌。');
   }
-}
+};
 
 export {
   registerUser,

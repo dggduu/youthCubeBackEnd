@@ -125,7 +125,6 @@ const refreshTokenFuc = async (req, res) => {
 
   try {
     const result = await refreshAuthToken(refreshToken);
-
     if (!result) {
       return res.status(403).json({ error: '非法的刷新密钥' });
     }
@@ -136,8 +135,8 @@ const refreshTokenFuc = async (req, res) => {
     });
 
   } catch (error) {
-    logger.error('Error refreshing token:', error.message);
-    return res.status(403).json({ error: error.message });
+    logger.error('Error refreshing token:', error);
+    return res.status(403).json({ error: error });
   }
 };
 

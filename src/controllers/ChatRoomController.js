@@ -435,5 +435,47 @@ listPrivateChatRooms: async (req, res) => {
             error: error.message
         });
     }
-}
+  },
+  getChatRoomMessages: async (req, res) => {
+      const { room_id } = req.params;
+      const currentUserId = req.user.userId;
+
+      try {
+        const member = await ChatRoomMember.findOne({
+          where: {
+            room_id,
+            user_id: currentUserId,
+          },
+        });
+
+        if (!member) {
+          return res.status(403).json({ message: '您不是该聊天室成员，无权查看消息' });
+        }
+
+        // 2. 处理分页参数
+        const { page = 0, size = 10 } = req.query;
+        const { limit, offset } = getPagination(page, size);
+
+        // 3. 查询聊天室的消息，并关联发送者信息
+        const messages = await Message.findAndCountAll({
+          where: { room_id },
+          include: [{
+            model: User,
+            as: 'sender',
+            attributes: ['id', 'name'],
+          }],
+          order: [['timestamp', 'DESC']],
+          limit,
+          offset,
+        });
+
+        // 4. 返回分页结果
+        const results = getPagingData(messages, page, limit);
+
+        return res.json(results);
+      } catch (error) {
+        logger.error(`获取聊天室消息失败：${error.message}`);
+        return res.status(500).json({ message: '服务器内部错误' });
+      }
+    },
 };
