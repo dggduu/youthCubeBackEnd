@@ -1,5 +1,5 @@
 import { ChatRoom } from '../config/Sequelize.js';
-import { ChatRoomMember, PrivateChat, UserFollows, Op, User, Message, sequelize } from '../config/Sequelize.js';
+import { ChatRoomMember, PrivateChat, UserFollows, Op, User, Message, sequelize, Invitation,Team } from '../config/Sequelize.js';
 import logger from "../config/pino.js";
 import { getPagination, getPagingData } from "../utils/pagination.js";
 export const chatRoomController = {
@@ -478,4 +478,392 @@ listPrivateChatRooms: async (req, res) => {
         return res.status(500).json({ message: '服务器内部错误' });
       }
     },
+  /**
+   * @route DELETE /api/chatrooms/:room_id/members/:user_id
+   * @desc 从聊天室移除成员
+   * @access Private（需权限为 owner 或 co_owner）
+   */
+  removeChatRoomMember: async (req, res) => {
+    const { room_id, user_id } = req.params;
+    const currentUserId = req.user.userId;
+
+    try {
+      // 检查操作者权限
+      const operator = await ChatRoomMember.findOne({
+        where: {
+          room_id,
+          user_id: currentUserId
+        }
+      });
+
+      if (!operator || !['owner', 'co_owner'].includes(operator.role)) {
+        return res.status(403).json({ message: '无权限操作' });
+      }
+
+      // 不能移除自己
+      if (parseInt(user_id) === currentUserId) {
+        return res.status(400).json({ message: '不能移除自己' });
+      }
+
+      // 检查要移除的成员
+      const memberToRemove = await ChatRoomMember.findOne({
+        where: {
+          room_id,
+          user_id
+        }
+      });
+
+      if (!memberToRemove) {
+        return res.status(404).json({ message: '该用户不是聊天室成员' });
+      }
+
+      // 不能移除owner，除非是转让后
+      if (memberToRemove.role === 'owner') {
+        return res.status(400).json({ message: '不能直接移除队长，请先转让队长权限' });
+      }
+
+      // 执行移除
+      await memberToRemove.destroy();
+
+      return res.json({ message: '成员已移除' });
+    } catch (error) {
+      logger.error('移除成员失败:', error);
+      console.error(error.stack);
+      return res.status(500).json({ message: '服务器内部错误' });
+    }
+  },
+
+  /**
+   * @route POST /api/chatrooms/:room_id/invitations
+   * @desc 邀请用户加入聊天室
+   * @access Private（需权限为 owner 或 co_owner）
+   */
+  inviteToChatRoom: async (req, res) => {
+    const { room_id } = req.params;
+    const { user_id, email, description } = req.body;
+    const currentUserId = req.user.userId;
+
+    if (!user_id && !email) {
+      return res.status(400).json({ message: '必须提供用户ID或邮箱' });
+    }
+
+    try {
+      // 检查操作者权限
+      const operator = await ChatRoomMember.findOne({
+        where: {
+          room_id,
+          user_id: currentUserId
+        }
+      });
+
+      if (!operator || !['owner', 'co_owner'].includes(operator.role)) {
+        return res.status(403).json({ message: '无权限操作' });
+      }
+
+      // 检查聊天室是否存在
+      const chatRoom = await ChatRoom.findByPk(room_id);
+      if (!chatRoom) {
+        return res.status(404).json({ message: '聊天室不存在' });
+      }
+
+      // 如果提供了user_id，检查用户是否已经是成员
+      if (user_id) {
+        const existingMember = await ChatRoomMember.findOne({
+          where: {
+            room_id,
+            user_id
+          }
+        });
+
+        if (existingMember) {
+          return res.status(400).json({ message: '该用户已是聊天室成员' });
+        }
+      }
+
+      // 创建邀请
+      const invitation = await Invitation.create({
+        team_id: chatRoom.team_id,
+        invited_by: currentUserId,
+        user_id: user_id || null,
+        email: email || null,
+        description: description || `${operator.member.name}邀请您加入聊天室`,
+        status: 'pending',
+        expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7天后过期
+      });
+
+      return res.status(201).json({
+        message: '邀请已发送',
+        invitation
+      });
+    } catch (error) {
+      logger.error('发送邀请失败:', error);
+      return res.status(500).json({ message: '服务器内部错误' });
+    }
+  },
+
+  /**
+   * @route PUT /api/chatrooms/:room_id/invitations/:invitation_id/respond
+   * @desc 回应邀请（接受或拒绝）
+   * @access Private（被邀请用户）
+   */
+respondToInvitation: async (req, res) => {
+  const { invitation_id } = req.params;
+  const { action } = req.body; // 'accept' 或 'reject'
+  const currentUserId = req.user.userId; // 当前操作者（管理员）
+
+  if (!['accept', 'reject'].includes(action)) {
+    return res.status(400).json({ message: '无效的操作类型' });
+  }
+
+  try {
+    // 查找邀请
+    const invitation = await Invitation.findByPk(invitation_id, {
+      include: [{
+        model: Team,
+        as: 'team',
+        include: [{
+          model: ChatRoom,
+          as: 'chatRoom'
+        }]
+      }]
+    });
+
+    if (!invitation) {
+      return res.status(404).json({ message: '邀请不存在' });
+    }
+
+    if (!invitation.team || !invitation.team.chatRoom) {
+      return res.status(404).json({ message: '邀请对应的团队或聊天室不存在' });
+    }
+
+    const roomId = invitation.team.chatRoom.room_id;
+
+    // 获取被邀请的用户 ID
+    const invitedUserId = invitation.user_id;
+    if (!invitedUserId) {
+      return res.status(400).json({ message: '该邀请不指向特定用户' });
+    }
+
+    // 权限检查：当前用户是否是管理员
+    const member = await ChatRoomMember.findOne({
+      where: {
+        room_id: roomId,
+        user_id: currentUserId
+      }
+    });
+
+    if (!member || !['owner', 'co_owner'].includes(member.role)) {
+      return res.status(403).json({ message: '无权操作此邀请' });
+    }
+
+    // 检查邀请状态
+    if (invitation.status !== 'pending') {
+      return res.status(400).json({ message: '邀请已处理或过期' });
+    }
+
+    // 检查是否过期
+    if (invitation.expires_at && new Date() > invitation.expires_at) {
+      invitation.status = 'expired';
+      await invitation.save();
+      return res.status(400).json({ message: '邀请已过期' });
+    }
+
+    // 处理接受邀请
+    if (action === 'accept') {
+      // 检查是否已经是成员
+      const existingMember = await ChatRoomMember.findOne({
+        where: {
+          room_id: roomId,
+          user_id: invitedUserId
+        }
+      });
+
+      if (existingMember) {
+        return res.status(400).json({ message: '该用户已是聊天室成员' });
+      }
+
+      // 添加用户到聊天室（使用被邀请人 ID）
+      await ChatRoomMember.create({
+        room_id: roomId,
+        user_id: invitedUserId,
+        role: 'member'
+      }, {
+        fields: ['room_id', 'user_id', 'role']
+      });
+
+      invitation.status = 'accepted';
+    } else {
+      invitation.status = 'rejected';
+    }
+
+    await invitation.save();
+
+    return res.json({
+      message: `邀请已${action === 'accept' ? '接受' : '拒绝'}`,
+      invitation
+    });
+  } catch (error) {
+    logger.error('处理邀请失败:', error);
+    console.error(error.stack);
+
+    if (error.name === 'SequelizeUniqueConstraintError') {
+      return res.status(400).json({ message: '该用户已是聊天室成员' });
+    }
+
+    return res.status(500).json({ message: '服务器内部错误' });
+  }
+},
+
+  /**
+   * @route PUT /api/teams/:team_id
+   * @desc 更新团队信息（名称和描述）
+   * @access Private（需权限为 owner 或 co_owner）
+   */
+  updateTeamInfo: async (req, res) => {
+    const { team_id } = req.params;
+    const { team_name, description, is_public } = req.body;
+    const currentUserId = req.user.userId;
+    const isPublic = is_public;
+    console.log(req.body);
+    try {
+      // 检查用户是否有权限
+      const chatRoom = await ChatRoom.findOne({
+        where: {
+          team_id,
+          type: 'team'
+        },
+        include: [{
+          model: ChatRoomMember,
+          as: 'members',
+          where: {
+            user_id: currentUserId
+          }
+        }]
+      });
+
+      if (!chatRoom || !chatRoom.members || 
+          !['owner', 'co_owner'].includes(chatRoom.members[0].role)) {
+        return res.status(403).json({ message: '无权限操作' });
+      }
+
+      // 更新团队信息
+      const team = await Team.findByPk(team_id);
+      if (!team) {
+        return res.status(404).json({ message: '团队不存在' });
+      }
+
+      if (team_name) team.team_name = team_name;
+      if (description) team.description = description;
+      if (isPublic !== undefined) {
+        console.log("change_vis");
+        team.is_public = isPublic ? 1 : 0;
+      };
+      await team.save();
+
+      return res.json({
+        message: '团队信息已更新',
+        team
+      });
+    } catch (error) {
+      logger.error('更新团队信息失败:', error);
+      console.error(error.stack);
+      return res.status(500).json({ message: '服务器内部错误' });
+    }
+  },
+  /**
+   * @route GET /api/chatrooms/:room_id/invitations
+   * @desc 获取聊天室的所有邀请记录（管理员操作）
+   * @access Private（需权限为 owner 或 co_owner）
+   */
+  listChatRoomInvitations: async (req, res) => {
+    const { room_id } = req.params;
+    const currentUserId = req.user.userId;
+    const { status, page = 0, size = 20 } = req.query;
+
+    try {
+      // 检查操作者权限
+      const operator = await ChatRoomMember.findOne({
+        where: {
+          room_id,
+          user_id: currentUserId
+        }
+      });
+
+      if (!operator || !['owner', 'co_owner'].includes(operator.role)) {
+        return res.status(403).json({ message: '无权限操作' });
+      }
+
+      // 获取聊天室关联的team_id
+      const chatRoom = await ChatRoom.findByPk(room_id);
+      if (!chatRoom || !chatRoom.team_id) {
+        return res.status(404).json({ message: '聊天室不存在或不是团队聊天室' });
+      }
+
+      // 构建查询条件
+      const whereCondition = {
+        team_id: chatRoom.team_id
+      };
+
+      if (status && ['pending', 'accepted', 'rejected', 'expired'].includes(status)) {
+        whereCondition.status = status;
+      }
+
+      // 处理分页
+      const { limit, offset } = getPagination(page, size);
+
+      // 查询邀请记录
+      const invitations = await Invitation.findAndCountAll({
+        where: whereCondition,
+        include: [
+          {
+            model: User,
+            as: 'inviter',
+            attributes: ['id', 'name', 'avatar_key']
+          },
+          {
+            model: User,
+            as: 'invitee',
+            attributes: ['id', 'name', 'avatar_key']
+          }
+        ],
+        order: [['created_at', 'DESC']],
+        limit,
+        offset
+      });
+
+      // 格式化返回数据
+      const formattedInvitations = invitations.rows.map(invite => ({
+        id: invite.invitation_id,
+        team_id: invite.team_id,
+        invited_by: {
+          id: invite.inviter.id,
+          name: invite.inviter.name,
+          avatar: invite.inviter.avatar_key
+        },
+        invitee: invite.invitee ? {
+          id: invite.invitee.id,
+          name: invite.invitee.name,
+          avatar: invite.invitee.avatar_key
+        } : null,
+        email: invite.email,
+        description: invite.description,
+        status: invite.status,
+        created_at: invite.created_at,
+        expires_at: invite.expires_at
+      }));
+
+      // 返回分页结果
+      const response = getPagingData(
+        { count: invitations.count, rows: formattedInvitations },
+        page,
+        limit
+      );
+
+      return res.json(response);
+    } catch (error) {
+      logger.error('获取邀请列表失败:', error);
+      console.error(error.stack);
+      return res.status(500).json({ message: '服务器内部错误' });
+    }
+  }
 };

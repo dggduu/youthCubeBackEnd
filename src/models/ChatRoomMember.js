@@ -14,8 +14,8 @@ export default (sequelize) => {
     },
     joined_at: {
       type: DataTypes.DATE,
-      allowNull: false,
-      defaultValue: sequelize.literal("CURRENT_TIMESTAMP")
+      allowNull: true,
+      defaultValue: null
     },
     role: {
         type: DataTypes.ENUM('owner', 'co_owner', 'member'),

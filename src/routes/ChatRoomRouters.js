@@ -16,5 +16,10 @@ router.get('/api/chatrooms/team/:team_id', authenticateToken, chatRoomController
 router.get('/api/chatrooms/private/:targetUserId', authenticateToken, chatRoomController.getPrivateChatRoom);
 router.get('/api/chatrooms/history/:room_id', authenticateToken, chatRoomController.getChatRoomMessages);
 
-
+router.delete('/api/chatrooms/:room_id/members/:user_id', authenticateToken, chatRoomController.removeChatRoomMember);
+// 邀请用户加入聊天室
+router.post('/api/chatrooms/:room_id/invitations', authenticateToken, chatRoomController.inviteToChatRoom);
+router.put('/api/chatrooms/:room_id/invitations/:invitation_id/respond', authenticateToken, chatRoomController.respondToInvitation);
+router.put('/api/teams/:team_id', authenticateToken, chatRoomController.updateTeamInfo);
+router.get('/api/chatrooms/:room_id/invitations', authenticateToken, chatRoomController.listChatRoomInvitations);
 export default router;

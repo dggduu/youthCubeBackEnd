@@ -55,6 +55,7 @@ export const userController = {
             model: Team,
             as: 'team',
             attributes: ['team_id', 'team_name', 'description'],
+            where: { is_public:1 }
           },
         ],
       });

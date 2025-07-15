@@ -151,7 +151,7 @@ export const teamController = {
           {
             model: ChatRoom,
             as: 'chatRoom',
-            attributes: ['room_id'],
+            attributes: ['room_id','name'],
             include: [{
               model: ChatRoomMember,
               as: 'members',
@@ -197,14 +197,14 @@ export const teamController = {
   updateTeam: async (req, res) => {
     try {
       const { id } = req.params;
-      const { team_name, description } = req.body;
+      const { team_name, description, is_public } = req.body;
 
       if (!team_name) {
         return res.status(400).json({ message: 'Team name is required.' });
       }
 
       const [updated] = await Team.update(
-        { team_name, description },
+        { team_name, description, is_public },
         { where: { team_id: id } }
       );
 

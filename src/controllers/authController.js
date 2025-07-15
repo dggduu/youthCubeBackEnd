@@ -118,7 +118,7 @@ const loginFuc = async (req, res) => {
 
 const refreshTokenFuc = async (req, res) => {
   const { refreshToken } = req.body;
-
+  console.log(refreshToken);
   if (!refreshToken) {
     return res.status(401).json({ error: '刷新密钥未提供' });
   }

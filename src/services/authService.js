@@ -85,8 +85,10 @@ async function authenticateUser(email, password) {
  */
 const refreshAuthToken = async (oldRefreshToken) => {
   try {
+    // 解码 refreshToken 获取用户信息
     const decoded = jwt.verify(oldRefreshToken, process.env.JWT_REFRESH_SECRET);
 
+    // 查询数据库中是否存在该 refreshToken
     const storedRefreshToken = await RefreshToken.findOne({
       where: {
         user_id: decoded.userId,
@@ -99,35 +101,42 @@ const refreshAuthToken = async (oldRefreshToken) => {
     }
 
     // 检查是否已过期
-    if (new Date() > new Date(storedRefreshToken.expires_at)) {
+    const now = new Date();
+    if (now > new Date(storedRefreshToken.expires_at)) {
+      // refreshToken 已过期：删除旧 token 并生成新的
       await storedRefreshToken.destroy();
-      throw new Error('刷新令牌已过期，请重新登录。');
+
+      // 生成新的 accessToken 和 refreshToken
+      const newAccessToken = generateAccessToken({ userId: decoded.userId, email: decoded.email });
+      const newRefreshToken = generateRefreshToken({ userId: decoded.userId });
+
+      const decodedNewRefreshToken = jwt.decode(newRefreshToken);
+      if (!decodedNewRefreshToken || !decodedNewRefreshToken.exp) {
+        throw new Error('生成刷新密钥时出现错误');
+      }
+
+      const newExpiresAt = new Date(decodedNewRefreshToken.exp * 1000);
+
+      // 存储新的 refreshToken 到数据库
+      await RefreshToken.create({
+        user_id: decoded.userId,
+        refresh_token: newRefreshToken,
+        expires_at: newExpiresAt,
+      });
+
+      return {
+        accessToken: newAccessToken,
+        refreshToken: newRefreshToken,
+      };
+    } else {
+      // refreshToken 未过期：直接使用原 refreshToken，只刷新 accessToken
+      const newAccessToken = generateAccessToken({ userId: decoded.userId, email: decoded.email });
+
+      return {
+        accessToken: newAccessToken,
+        refreshToken: oldRefreshToken, // 保留原 refreshToken
+      };
     }
-
-    // 生成新的 token
-    const newAccessToken = generateAccessToken({ userId: decoded.userId, email: decoded.email });
-    const newRefreshToken = generateRefreshToken({ userId: decoded.userId });
-
-    const decodedNewRefreshToken = jwt.decode(newRefreshToken);
-    if (!decodedNewRefreshToken || !decodedNewRefreshToken.exp) {
-      throw new Error('生成刷新密钥时出现错误');
-    }
-
-    const newExpiresAt = new Date(decodedNewRefreshToken.exp * 1000);
-
-    // 删除旧 token，插入新 token
-    await storedRefreshToken.destroy();
-
-    await RefreshToken.create({
-      user_id: decoded.userId,
-      refresh_token: newRefreshToken,
-      expires_at: newExpiresAt,
-    });
-
-    return {
-      accessToken: newAccessToken,
-      refreshToken: newRefreshToken,
-    };
 
   } catch (error) {
     logger.error('刷新 token 失败:', {
