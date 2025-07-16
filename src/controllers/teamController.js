@@ -240,5 +240,6 @@ export const teamController = {
       console.error('Delete team error:', error);
       res.status(500).json({ message: 'Server error.', error: error.message });
     }
-  }
+  },
+
 };

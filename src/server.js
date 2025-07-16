@@ -5,7 +5,7 @@ import dotenv from 'dotenv';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
-import { connectDB } from './config/Sequelize.js';
+import { connectDB, ProgressComment } from './config/Sequelize.js';
 import authRoutes from './routes/auth.js';
 import { rateLimit } from 'express-rate-limit';
 import logger from "./config/pino.js";
@@ -18,6 +18,8 @@ import TeamRoutes from "./routes/TeamRoutes.js";
 import UserRoutes from "./routes/UserRoutes.js";
 import InviteRouters from "./routes/InvitationRouter.js";
 import ChatRoomRouters from "./routes/ChatRoomRouters.js";
+import ProgessRouters from "./routes/ProgessRouters.js";
+
 import http from 'http';
 import { setupSocketIO } from './config/socket.js';
 
@@ -60,6 +62,7 @@ app.use('/v1/upload', uploadRoutes);
 app.use('/v1/dl', downloadRoute);
 app.use('/v1', InviteRouters);
 app.use("/v1", ChatRoomRouters);
+app.use("/v1", ProgessRouters);
 
 // 错误处理中间件
 app.use((err, req, res, next) => {

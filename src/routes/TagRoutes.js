@@ -7,5 +7,6 @@ router.post('/api/tags', authenticateToken, tagController.createTag);
 router.get('/api/tags', tagController.getAllTags);
 router.get('/api/tags/:id', tagController.getTagById);
 router.get('/api/tags/:id/posts', tagController.getPostsByTag);
+router.get('/api/tags/:tagId/teams', tagController.getTeamsByTagId);
 
 export default router;

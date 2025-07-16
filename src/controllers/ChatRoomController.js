@@ -721,10 +721,10 @@ respondToInvitation: async (req, res) => {
    */
   updateTeamInfo: async (req, res) => {
     const { team_id } = req.params;
-    const { team_name, description, is_public } = req.body;
+    const { team_name, description, is_public, grade } = req.body;
     const currentUserId = req.user.userId;
     const isPublic = is_public;
-    console.log(req.body);
+
     try {
       // 检查用户是否有权限
       const chatRoom = await ChatRoom.findOne({
@@ -755,9 +755,11 @@ respondToInvitation: async (req, res) => {
       if (team_name) team.team_name = team_name;
       if (description) team.description = description;
       if (isPublic !== undefined) {
-        console.log("change_vis");
         team.is_public = isPublic ? 1 : 0;
       };
+      if(grade) {
+        team.grade = grade;
+      }
       await team.save();
 
       return res.json({
@@ -765,8 +767,7 @@ respondToInvitation: async (req, res) => {
         team
       });
     } catch (error) {
-      logger.error('更新团队信息失败:', error);
-      console.error(error.stack);
+      logger.error('更新团队信息失败', error);
       return res.status(500).json({ message: '服务器内部错误' });
     }
   },

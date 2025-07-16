@@ -23,6 +23,8 @@ import projectResultsModel from '../models/ProjectResult.js';
 import invitationModel from "../models/Invitation.js";
 import friendInvitationsModel from "../models/FriendInvitation.js";
 import PrivateChatModel from '../models/PrivateChat.js';
+import TeamProgressModel from "../models/TeamProgress.js";
+import ProgressCommentModel from "../models/ProgressComment.js";
 
 // 加载环境变量
 dotenv.config();
@@ -59,6 +61,8 @@ const ProjectResult = projectResultsModel(sequelize, Sequelize);
 const Invitation = invitationModel(sequelize, Sequelize);
 const FriendInvitation = friendInvitationsModel(sequelize, Sequelize);
 const PrivateChat = PrivateChatModel(sequelize, Sequelize);
+const ProgressComment = ProgressCommentModel(sequelize, Sequelize);
+const TeamProgress = TeamProgressModel(sequelize, Sequelize);
 
 // 建立模型关联
 User.hasMany(RefreshToken, { foreignKey: 'user_id', as: 'refreshTokens' });
@@ -133,7 +137,9 @@ const db = {
   ProjectResult,
   Invitation,
   FriendInvitation,
-  PrivateChat
+  PrivateChat,
+  TeamProgress,
+  ProgressComment
 };
 
 Object.keys(db).forEach(modelName => {
@@ -175,5 +181,7 @@ export {
   Invitation,
   FriendInvitation,
   PrivateChat,
+  TeamProgress,
+  ProgressComment,
   connectDB,
 };

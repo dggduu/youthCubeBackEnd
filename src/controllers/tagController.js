@@ -1,5 +1,5 @@
 import { tags } from '../config/Sequelize.js';
-import { Posts } from '../config/Sequelize.js';
+import { Posts, Team, ChatRoom, ChatRoomMember } from '../config/Sequelize.js';
 import { Op } from '../config/Sequelize.js';
 
 import { getPagination, getPagingData } from '../utils/pagination.js';
@@ -113,6 +113,73 @@ export const tagController = {
     } catch (error) {
       console.error('Get posts by tag error:', error);
       res.status(500).json({ message: 'Server error.', error: error.message });
+    }
+  },
+  getTeamsByTagId : async (req, res) => {
+    try {
+      const { page, size } = req.query;
+      const { tagId } = req.params;
+      const { limit, offset } = getPagination(page, size);
+
+      const whereCondition = {
+        is_public: true
+      };
+
+      const data = await Team.findAndCountAll({
+        attributes: { exclude: ['description'] },
+        where: whereCondition,
+        limit,
+        offset,
+        order: [['create_at', 'DESC']],
+        include: [
+          {
+            model: tags,
+            as: 'tags',
+            attributes: ['tag_id', 'tag_name'],
+            through: { attributes: [] },
+            where: { tag_id: tagId },
+            required: true
+          },
+          {
+            model: ChatRoom,
+            as: 'chatRoom',
+            attributes: ['room_id', 'name'],
+            include: [{
+              model: ChatRoomMember,
+              as: 'members',
+              attributes: ['user_id'],
+              required: false
+            }]
+          }
+        ]
+      });
+
+      const teams = data.rows.map(team => {
+      const memberCount = team.chatRoom?.members?.length || 0;
+        
+      return {
+          team_id: team.team_id,
+          team_name: team.team_name,
+          create_at: team.create_at,
+          grade: team.grade,
+          is_public: team.is_public,
+          tags: team.tags,
+          member_count: memberCount
+        };
+      });
+
+      const response = getPagingData({
+        count: data.count,
+        rows: teams
+      }, page, limit);
+
+      res.status(200).json(response);
+    } catch (error) {
+      console.error('Get teams by tag error:', error);
+      res.status(500).json({ 
+        message: 'Server error while fetching teams by tag.', 
+        error: error.message 
+      });
     }
   }
 };
