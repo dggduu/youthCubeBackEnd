@@ -41,10 +41,8 @@ router.put('/api/progress/:id', authenticateToken, progressController.updateProg
  */
 router.delete('/api/progress/:id', authenticateToken, progressController.deleteProgress);
 
-// ----------------------------
-// 进度评论相关路由
-// ----------------------------
 
+// 进度评论相关路由
 /**
  * @route POST /api/progress/:progressId/comments
  * @desc 给进度添加评论
@@ -65,19 +63,5 @@ router.get('/api/progress/:progressId/comments', progressController.getCommentsF
  * @access Public
  */
 router.get('/api/progress/comments/:commentId/replies', progressController.getRepliesForProgressComment);
-
-/**
- * @route PUT /api/progress/comments/:id
- * @desc 修改评论
- * @access Private（仅本人）
- */
-// router.put('/api/progress/comments/:id', authenticateToken, progressController.updateProgressComment);
-
-/**
- * @route DELETE /api/progress/comments/:id
- * @desc 删除评论
- * @access Private（仅本人）
- */
-// router.delete('/api/progress/comments/:id', authenticateToken, progressController.deleteProgressComment);
 
 export default router;

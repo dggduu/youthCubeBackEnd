@@ -16,7 +16,6 @@ export const teamController = {
 
     try {
       const { team_name, description, tagIds, is_public, grade } = req.body;
-
       if (!team_name) {
         return res.status(400).json({ message: '需要队伍名称' });
       }
@@ -46,6 +45,7 @@ export const teamController = {
       await ChatRoomMember.create({
         room_id: chatRoom.room_id,
         user_id: user_id,
+        joined_at: new Date(),
         role: 'owner'
       }, { transaction });
 
@@ -63,7 +63,7 @@ export const teamController = {
       // 提交事务
       await transaction.commit();
 
-      res.status(201).json({ message: '队伍和聊天室成功创建' });
+      res.status(201).json({ message: '队伍和聊天室成功创建', team_id:newTeam.team_id });
     } catch (error) {
       await transaction.rollback(); // 出错回滚
       console.error('创建队伍和聊天室时遇到问题:', error);

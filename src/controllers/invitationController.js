@@ -85,7 +85,7 @@ export const invitationController = {
     try {
       const currentUserId = req.user.userId;
       const { team_id, user_id, email, description } = req.body;
-
+      console.log(req.body);
       if (!team_id) {
         return res.status(400).json({ message: 'team_id is required.' });
       }
