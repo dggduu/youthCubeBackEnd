@@ -68,7 +68,6 @@ export const postController = {
     try {
       const { page, size, userId, search, sortBy, order, tagId } = req.query;
       const { limit, offset } = getPagination(page, size);
-      console.log('Index:',limit, offset, req.query);
       let whereCondition = {};
       if (userId) {
         whereCondition.user_id = userId;
@@ -257,7 +256,6 @@ export const postController = {
    */
   likePost: async (req, res) => {
     try {
-      console.log('req.user:', req.user);
       const { id: postId } = req.params;
       const user_id = req.user.userId;
 

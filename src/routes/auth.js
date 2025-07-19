@@ -4,7 +4,10 @@ import {
   emailVerification,
   registerFuc,
   loginFuc,
-  refreshTokenFuc
+  refreshTokenFuc,
+  findPassword,
+  generateCaptcha,
+  resetPassword
 } from '../controllers/authController.js';
 
 import authMiddleware from "../middleware/authMiddleware.js";
@@ -23,10 +26,20 @@ router.post('/api/login', loginFuc);
 // 刷新 Token 接口
 router.post('/api/refresh_token', refreshTokenFuc);
 
+// 用于在 SplashScreen 验证登录状态
 router.get('/api/auth/status', authMiddleware, async (req, res)=>{
   return res.status(200).json({
     "status": "success",
   });
 });
+
+// 生成行为验证码
+router.get('/api/captcha-gen', generateCaptcha);
+
+// 发送重置邮箱验证码
+router.post('/api/find-pswd', rateLimiter, findPassword);
+
+// 重置密码
+router.post('/api/reset-pswd', resetPassword);
 
 export default router;

@@ -12,6 +12,8 @@
 - [x] 邀请接口
 - [x] 敏感词检测(先不做base64编码，方便后期添加)
 
+- [ ] 团队授权
+- [ ] 支持多个队伍
 - [ ] 部署
 ### SpecialThanks
 - mint-filter : https://www.npmjs.com/package/mint-filter

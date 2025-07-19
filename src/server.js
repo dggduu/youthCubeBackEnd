@@ -22,7 +22,7 @@ import ProgessRouters from "./routes/ProgessRouters.js";
 
 import http from 'http';
 import { setupSocketIO } from './config/socket.js';
-
+import session from 'express-session';
 import { getFilter } from "./utils/sensitiveWordFilter.js";
 
 // 加载环境变量
@@ -40,6 +40,14 @@ const limiter = rateLimit({
 });
 
 const filter = getFilter();
+
+// 使用session
+app.use(session({
+  secret: process.env.SESSION_SECRET,
+  resave: false,
+  saveUninitialized: true,
+  cookie: { maxAge: 5 * 60 * 1000 } // 15分钟
+}));
 
 // 中间件
 app.use(express.json());

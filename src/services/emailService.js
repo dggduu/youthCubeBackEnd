@@ -78,4 +78,55 @@ const sendVerificationEmail = async (email) => {
   }
 };
 
-export { sendVerificationEmail, pendingVerifications };
+
+const sendPasswordResetEmail = async (email) => {
+  const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+
+  pendingVerifications.set(email, {
+    code: verificationCode,
+    timestamp: Date.now()
+  });
+  const mailOptions = {
+    from: `"青智立方团队" <${process.env.SMTP_USER}>`,
+    to: email,
+    subject: '重置您的密码',
+    text: `您的验证码是：${verificationCode}\n该验证码将在5分钟后失效。`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; border: 1px solid #ddd; padding: 10px 20px; border-radius: 8px;">
+          <img src="https://s21.ax1x.com/2025/06/19/pVVEzbn.png" alt="pVVEzbn.png" style="width: 50px;margin-top: 20px;" />
+          <h2 style="color: #333;">注册验证码</h2>
+          <p>尊敬的用户，</p>
+          <p>我们收到了您更改密码的请求，请使用以下验证码完成验证：</p>
+          <div style="
+              font-size: 24px;
+              font-weight: bold;
+              color: #000000;
+              background-color: #fff9e4;
+              border: 2px solid #f8e287;
+              border-radius: 15px;
+              padding: 20px 100px;
+              text-align: center;
+              margin: 30px auto;
+              max-width: 300px;
+              ">
+              ${verificationCode}
+          </div>
+          <p>该验证码将在 <strong>5分钟</strong> 内有效。</p>       
+          <p>如果您没有进行此操作，请忽略本邮件。</p>
+          <br>
+          <p>祝好，<br><strong>青智立方团队</strong></p>
+      </div>
+    `
+  };
+
+  try {
+    const info = await transporter.sendMail(mailOptions);
+    logger.info('重置密码邮件发送成功:', info.messageId, '邮箱:', email);
+    return true;
+  } catch (error) {
+    logger.error('重置密码邮件发送失败:', error);
+    return false;
+  }
+};
+
+export { sendVerificationEmail, pendingVerifications,sendPasswordResetEmail};

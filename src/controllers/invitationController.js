@@ -142,9 +142,13 @@ export const invitationController = {
     try {
       const currentUserId = req.user.userId;
       const { user_id, email,desciption } = req.body;
-
+      console.log(req.body,currentUserId);
       if (!user_id && !email) {
         return res.status(400).json({ message: 'Either user_id or email is required.' });
+      }
+
+      if(user_id == currentUserId) {
+        return res.status(400).json({ message: "不能向自己发送好友申请" });
       }
 
       const existing = await FriendInvitation.findOne({
@@ -247,6 +251,7 @@ export const invitationController = {
         room_id: chatRoom.room_id,
         user_id: targetUserId,
         role: 'member',
+        joined_at: new Date(),
       }, { transaction });
 
       // 更新team_id到user表
@@ -296,7 +301,9 @@ export const invitationController = {
       if (invitation.status !== 'pending') {
         return res.status(400).json({ message: 'Invitation is not pending.' });
       }
-
+      if (currentUserId === invitation.inviter_id) {
+        return res.status(400).json({ message: '不能与自己互粉' });
+      }
       // 添加互相关注关系
       await UserFollows.create({
         follower_id: currentUserId,
