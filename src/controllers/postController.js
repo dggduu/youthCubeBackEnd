@@ -6,7 +6,7 @@ import { PostTags } from '../config/Sequelize.js';
 import { tags } from '../config/Sequelize.js';
 import { Likes } from '../config/Sequelize.js';
 import { Comments } from '../config/Sequelize.js';
-import { collections } from '../config/Sequelize.js';
+import { collections, Team, ProjectResult } from '../config/Sequelize.js';
 import { Op } from '../config/Sequelize.js';
 import logger from "../config/pino.js";
 import { getPagination, getPagingData } from '../utils/pagination.js';
@@ -58,7 +58,78 @@ export const postController = {
       res.status(500).json({ message: 'Server error.', error: error.message });
     }
   },
+  createTeamReport: async (req, res) => {
+    const transaction = await Posts.sequelize.transaction();
+    try {
+      const { title, content, cover_image_url, tagIds, type } = req.body;
+      const user_id = req.user.userId;
+      const team_id = req.params.teamId;
 
+      if (!title || !content || !user_id || !team_id || !type) {
+        await transaction.rollback();
+        return res.status(400).json({
+          message: '标题、内容、用户ID、团队ID和报告类型都是必填项'
+        });
+      }
+
+      // 验证 type
+      if (!['article', 'manual'].includes(type)) {
+        await transaction.rollback();
+        return res.status(400).json({
+          message: '报告类型必须是 article 或 manual'
+        });
+      }
+
+      // 1. 创建帖子
+      const newPost = await Posts.create({
+        user_id,
+        title,
+        content,
+        cover_image_url,
+      }, { transaction });
+
+      // 2. 处理标签
+      if (tagIds && Array.isArray(tagIds) && tagIds.length > 0) {
+        const postTagRecords = tagIds.map(tag_id => ({
+          post_id: newPost.post_id,
+          tag_id,
+          created_at: new Date(),
+          updated_at: new Date(),
+        }));
+        await PostTags.bulkCreate(postTagRecords, { transaction });
+      }
+
+      // 3. 创建项目成果（团队报告）
+      const newReport = await ProjectResult.create({
+        team_id,
+        type,
+        post_id: newPost.post_id,
+        is_completed: false,
+        completed_at: null
+      }, { transaction });
+
+      await transaction.commit();
+
+      return res.status(201).json({
+        message: '团队报告创建成功'
+      });
+
+    } catch (error) {
+      console.error('【进入 catch】创建团队报告失败:', error);
+      console.error('错误堆栈:', error.stack);
+
+      try {
+        await transaction.rollback();
+      } catch (rollbackError) {
+        console.error('事务回滚失败:', rollbackError);
+      }
+
+      return res.status(500).json({
+        message: '服务器内部错误',
+        error: error.message
+      });
+    }
+  },
   /**
    * @route GET /api/posts
    * @desc Get all posts with pagination, filtering, sorting

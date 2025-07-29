@@ -484,55 +484,109 @@ listPrivateChatRooms: async (req, res) => {
    * @access Private（需权限为 owner 或 co_owner）
    */
   removeChatRoomMember: async (req, res) => {
-    const { room_id, user_id } = req.params;
-    const currentUserId = req.user.userId;
+      const { room_id, user_id } = req.params;
+      const currentUserId = req.user.userId;
 
+      try {
+        // 检查操作者权限
+        const operator = await ChatRoomMember.findOne({
+          where: {
+            room_id,
+            user_id: currentUserId
+          }
+        });
+
+        if (!operator || !['owner', 'co_owner'].includes(operator.role)) {
+          return res.status(403).json({ message: '无权限操作' });
+        }
+
+        // 不能移除自己
+        if (parseInt(user_id) === currentUserId) {
+          return res.status(400).json({ message: '不能移除自己' });
+        }
+
+        // 检查要移除的成员
+        const memberToRemove = await ChatRoomMember.findOne({
+          where: {
+            room_id,
+            user_id
+          }
+        });
+
+        if (!memberToRemove) {
+          return res.status(404).json({ message: '该用户不是聊天室成员' });
+        }
+
+        // 不能移除owner，除非是转让后
+        if (memberToRemove.role === 'owner') {
+          return res.status(400).json({ message: '不能直接移除队长，请先转让队长权限' });
+        }
+
+        // 执行移除
+        await memberToRemove.destroy();
+
+        // 更新用户表中的team_id为NULL
+        await User.update(
+          { team_id: null },
+          {
+            where: {
+              id: user_id
+            }
+          }
+        );
+
+        return res.json({ message: '成员已移除' });
+      } catch (error) {
+        logger.error('移除成员失败:', error);
+        console.error(error.stack);
+        return res.status(500).json({ message: '服务器内部错误' });
+      }
+    },
+  leaveChatRoom: async (req, res) => {
+    const { room_id } = req.params;
+    const currentUserId = req.user.userId;
     try {
-      // 检查操作者权限
-      const operator = await ChatRoomMember.findOne({
+      // 检查用户是否是群成员
+      const member = await ChatRoomMember.findOne({
         where: {
-          room_id,
+          room_id: room_id,
           user_id: currentUserId
         }
       });
 
-      if (!operator || !['owner', 'co_owner'].includes(operator.role)) {
-        return res.status(403).json({ message: '无权限操作' });
+      if (!member) {
+        return res.status(404).json({ message: '您不是该聊天室成员' });
       }
 
-      // 不能移除自己
-      if (parseInt(user_id) === currentUserId) {
-        return res.status(400).json({ message: '不能移除自己' });
+      // 如果是owner，需要先转让权限才能退群
+      if (member.role === 'owner') {
+        return res.status(400).json({ 
+          message: '队长不能直接退群，请先转让队长权限' 
+        });
       }
 
-      // 检查要移除的成员
-      const memberToRemove = await ChatRoomMember.findOne({
-        where: {
-          room_id,
-          user_id
+      // 执行退群操作
+      await member.destroy();
+
+      // 更新用户表中的team_id为NULL
+      await User.update(
+        { team_id: null },
+        {
+          where: {
+            id: currentUserId
+          }
         }
-      });
+      );
 
-      if (!memberToRemove) {
-        return res.status(404).json({ message: '该用户不是聊天室成员' });
-      }
-
-      // 不能移除owner，除非是转让后
-      if (memberToRemove.role === 'owner') {
-        return res.status(400).json({ message: '不能直接移除队长，请先转让队长权限' });
-      }
-
-      // 执行移除
-      await memberToRemove.destroy();
-
-      return res.json({ message: '成员已移除' });
+      return res.json({ message: '已成功退出群组' });
     } catch (error) {
-      logger.error('移除成员失败:', error);
+      logger.error('退群失败:', error);
       console.error(error.stack);
       return res.status(500).json({ message: '服务器内部错误' });
     }
   },
 
+    
   /**
    * @route POST /api/chatrooms/:room_id/invitations
    * @desc 邀请用户加入聊天室

@@ -109,12 +109,6 @@ tags.belongsToMany(Team, {
   as: 'teams'
 });
 
-
-Team.hasMany(ProjectResult, { foreignKey: 'team_id', as: 'projectResults' });
-ProjectResult.belongsTo(Team, { foreignKey: 'team_id', as: 'team' });
-
-ProjectResult.belongsTo(Posts, { foreignKey: 'post_id', as: 'post' });
-
 // 构建 db 对象
 const db = {
   sequelize,

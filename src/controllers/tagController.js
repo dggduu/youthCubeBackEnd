@@ -38,12 +38,18 @@ export const tagController = {
    */
   getAllTags: async (req, res) => {
     try {
-      const allTags = await tags.findAll({
+      const { page, size } = req.query;
+      const { limit, offset } = getPagination(page, size);
+
+      const data = await tags.findAndCountAll({
         attributes: ['tag_id', 'tag_name', 'created_at'],
-        order: [['tag_name', 'ASC']]
+        order: [['tag_name', 'ASC']],
+        limit,
+        offset
       });
 
-      res.status(200).json(allTags);
+      const response = getPagingData(data, page, limit);
+      res.status(200).json(response);
     } catch (error) {
       console.error('Get all tags error:', error);
       res.status(500).json({ message: 'Server error.', error: error.message });

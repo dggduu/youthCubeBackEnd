@@ -42,7 +42,6 @@ export const userController = {
   getUserById: async (req, res) => {
     try {
       const { id } = req.params;
-
       const user = await User.findByPk(id, {
         attributes: { exclude: ['password', 'created_at', 'updated_at'] },
         include: [
@@ -50,18 +49,31 @@ export const userController = {
             model: Posts,
             as: 'posts',
             attributes: ['post_id', 'title', 'cover_image_url', 'likes_count', 'comments_count', 'collected_count'],
-          },
-          {
-            model: Team,
-            as: 'team',
-            attributes: ['team_id', 'team_name', 'description'],
-            where: { is_public:1 }
-          },
+          }
         ],
+        raw: true,
+        nest: true
       });
 
       if (!user) {
         return res.status(404).json({ message: 'User not found.' });
+      }
+
+      if (user.team_id) {
+        const team = await Team.findOne({
+          where: { 
+            team_id: user.team_id,
+            is_public: 1 
+          },
+          attributes: ['team_id', 'team_name', 'description'],
+          raw: true
+        });
+        
+        if (team) {
+          user.team = team;
+        } else {
+          user.team_id = null;
+        }
       }
 
       return res.status(200).json(user);

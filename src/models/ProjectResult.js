@@ -19,6 +19,11 @@ export default (sequelize) => {
     post_id: {
       type: DataTypes.INTEGER,
       allowNull: true,
+      // 可选：添加外键约束（推荐）
+      // references: {
+      //   model: 'posts',
+      //   key: 'post_id'
+      // }
     },
     is_completed: {
       type: DataTypes.BOOLEAN,
@@ -33,6 +38,22 @@ export default (sequelize) => {
     timestamps: false,
     tableName: 'project_results',
   });
+
+  ProjectResult.associate = function(models) {
+    ProjectResult.belongsTo(models.Posts, {
+      foreignKey: 'post_id',
+      as: 'postPR',
+      onDelete: 'SET NULL',
+      onUpdate: 'CASCADE'
+    });
+
+    ProjectResult.belongsTo(models.Team, {
+      foreignKey: 'team_id',
+      as: 'teamPR',
+      onDelete: 'CASCADE',
+      onUpdate: 'CASCADE'
+    });
+  };
 
   return ProjectResult;
 };

@@ -4,6 +4,7 @@ import { postController } from "../controllers/postController.js";
 import authenticateToken from "../middleware/authMiddleware.js";
 
 router.post('/api/posts', authenticateToken, postController.createPost);
+router.post('/api/posts/:teamId/team', authenticateToken, postController.createTeamReport);
 router.get('/api/posts', postController.getAllPosts);
 router.get('/api/posts/:id', postController.getPostById);
 router.put('/api/posts/:id', authenticateToken, postController.updatePost);

@@ -62,6 +62,10 @@ export default (sequelize) => {
       foreignKey: 'team_id',
       as: 'chatRoom'
     });
+    Team.hasMany(models.ProjectResult, {
+      foreignKey: 'team_id',
+      as: 'projectResults'
+    });
   };
 
   return Team;

@@ -31,6 +31,10 @@ export default (sequelize) => {
       foreignKey: 'room_id',
       as: 'team'
     });
+    ChatRoomMember.belongsTo(models.ChatRoom, {
+      foreignKey: 'room_id',
+      as: 'room_chat'
+    });
     
     ChatRoomMember.belongsTo(models.User, {
       foreignKey: 'user_id',

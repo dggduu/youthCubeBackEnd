@@ -19,7 +19,6 @@ import UserRoutes from "./routes/UserRoutes.js";
 import InviteRouters from "./routes/InvitationRouter.js";
 import ChatRoomRouters from "./routes/ChatRoomRouters.js";
 import ProgessRouters from "./routes/ProgessRouters.js";
-
 import http from 'http';
 import { setupSocketIO } from './config/socket.js';
 import session from 'express-session';
@@ -48,7 +47,6 @@ app.use(session({
   saveUninitialized: true,
   cookie: { maxAge: 5 * 60 * 1000 } // 15分钟
 }));
-
 // 中间件
 app.use(express.json());
 app.use(cors({ origin: '*' }));
