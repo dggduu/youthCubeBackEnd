@@ -43,16 +43,14 @@ export const userController = {
     try {
       const { id } = req.params;
       const user = await User.findByPk(id, {
-        attributes: { exclude: ['password', 'created_at', 'updated_at'] },
-        include: [
-          {
-            model: Posts,
-            as: 'posts',
-            attributes: ['post_id', 'title', 'cover_image_url', 'likes_count', 'comments_count', 'collected_count'],
-          }
-        ],
-        raw: true,
-        nest: true
+        attributes: { exclude: ['password'] },
+        include: [{
+          model: Posts,
+          as: 'posts',
+          attributes: ['post_id', 'title', 'cover_image_url'],
+          separate: true,
+          order: [['created_at', 'DESC']]
+        }]
       });
 
       if (!user) {
