@@ -86,6 +86,7 @@ export const invitationController = {
       const currentUserId = req.user.userId;
       const { team_id, user_id, email, description } = req.body;
       console.log(req.body);
+      
       if (!team_id) {
         return res.status(400).json({ message: 'team_id is required.' });
       }
@@ -98,6 +99,23 @@ export const invitationController = {
         return res.status(400).json({ message: 'Description is required.' });
       }
 
+      if (user_id) {
+        const userToInvite = await User.findOne({
+          where: {
+            id: user_id
+          }
+        });
+
+        if (!userToInvite) {
+          return res.status(404).json({ message: 'User not found.' });
+        }
+
+        if (userToInvite.team_id !== null) {
+          return res.status(400).json({ message: 'User is already in a team and cannot be invited.' });
+        }
+      }
+
+
       const existing = await Invitation.findOne({
         where: {
           team_id,
@@ -105,7 +123,8 @@ export const invitationController = {
           [Op.or]: [
             { user_id: user_id || null },
             { email: email || null }
-          ]
+          ],
+          status: 'pending'
         }
       });
 
@@ -231,6 +250,20 @@ export const invitationController = {
 
       // 如果是管理员接受其他人的邀请
       const targetUserId = currentUserRole ? invitation.user_id : currentUserId;
+
+      const targetUser = await User.findByPk(targetUserId, { transaction });
+
+      if (!targetUser) {
+        await transaction.rollback();
+        return res.status(404).json({ message: 'Target user not found.' });
+      }
+
+      if (targetUser.team_id !== null) {
+        await transaction.rollback();
+        return res.status(409).json({ 
+          message: 'User already belongs to a team and cannot accept this invitation.' 
+        });
+      }
 
       // 检查用户是否已经是成员
       const existingMember = await ChatRoomMember.findOne({

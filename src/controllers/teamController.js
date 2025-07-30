@@ -1,4 +1,4 @@
-import { Team, TeamTag, tags, ChatRoom, ChatRoomMember,ProjectResult, User, Invitation } from '../config/Sequelize.js';
+import { Team, TeamTag, tags, ChatRoom, ChatRoomMember,ProjectResult, User, Invitation,Message } from '../config/Sequelize.js';
 import { Op, sequelize } from '../config/Sequelize.js';
 
 
@@ -257,7 +257,7 @@ deleteTeam: async (req, res) => {
       const { id } = req.params;
       const currentUserId = req.user.userId;
 
-      // 1. 检查团队是否存在且操作者是所有者
+      // 1. 验证团队和权限
       const team = await Team.findOne({
         where: { team_id: id },
         include: [{
@@ -278,8 +278,8 @@ deleteTeam: async (req, res) => {
 
       if (!team) {
         await transaction.rollback();
-        return res.status(404).json({ 
-          message: '团队不存在或您不是团队所有者' 
+        return res.status(403).json({ 
+          message: '无权删除此团队或团队不存在' 
         });
       }
 
@@ -291,8 +291,14 @@ deleteTeam: async (req, res) => {
       });
       const memberIds = members.map(m => m.user_id);
 
-      // 3. 删除顺序必须正确
-      // 先删除邀请
+      // 3. 按正确顺序删除关联数据
+      // 先删除消息记录
+      await Message.destroy({
+        where: { room_id: team.chatRoom.room_id },
+        transaction
+      });
+
+      // 删除邀请
       await Invitation.destroy({
         where: { team_id: id },
         transaction
@@ -310,13 +316,13 @@ deleteTeam: async (req, res) => {
         transaction
       });
 
-      // 特别注意：必须先删除聊天室，再删除团队
+      // 删除聊天室
       await ChatRoom.destroy({
         where: { room_id: team.chatRoom.room_id },
         transaction
       });
 
-      // 4. 更新成员的team_id为null
+      // 4. 更新成员的team_id
       await User.update(
         { team_id: null },
         {
@@ -325,7 +331,7 @@ deleteTeam: async (req, res) => {
         }
       );
 
-      // 5. 最后删除团队本身
+      // 5. 最后删除团队
       await Team.destroy({
         where: { team_id: id },
         transaction
@@ -333,23 +339,24 @@ deleteTeam: async (req, res) => {
 
       await transaction.commit();
       return res.status(204).send();
+      
     } catch (error) {
       await transaction.rollback();
       console.error('删除团队失败:', error);
       
-      // 更详细的错误响应
       if (error.name === 'SequelizeForeignKeyConstraintError') {
-        return res.status(409).json({ 
-          message: '删除失败，存在关联数据未清理',
-          detail: error.parent.sqlMessage
+        return res.status(409).json({
+          message: '删除失败，请先清理关联数据',
+          detail: error.parent?.sqlMessage || error.message,
+          solution: '请确保已删除所有聊天消息和关联记录'
         });
       }
       
       return res.status(500).json({ 
-        message: '服务器内部错误',
-        error: error.message 
+        message: '删除团队失败',
+        error: process.env.NODE_ENV === 'development' ? error.message : '服务器错误' 
       });
     }
-  },
+  }
 
 };

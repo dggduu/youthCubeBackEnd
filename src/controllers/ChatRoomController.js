@@ -664,7 +664,6 @@ respondToInvitation: async (req, res) => {
   const { invitation_id } = req.params;
   const { action } = req.body; // 'accept' 或 'reject'
   const currentUserId = req.user.userId; // 当前操作者（管理员）
-
   if (!['accept', 'reject'].includes(action)) {
     return res.status(400).json({ message: '无效的操作类型' });
   }
@@ -681,7 +680,6 @@ respondToInvitation: async (req, res) => {
         }]
       }]
     });
-
     if (!invitation) {
       return res.status(404).json({ message: '邀请不存在' });
     }
@@ -697,7 +695,6 @@ respondToInvitation: async (req, res) => {
     if (!invitedUserId) {
       return res.status(400).json({ message: '该邀请不指向特定用户' });
     }
-
     // 权限检查：当前用户是否是管理员
     const member = await ChatRoomMember.findOne({
       where: {
@@ -714,7 +711,6 @@ respondToInvitation: async (req, res) => {
     if (invitation.status !== 'pending') {
       return res.status(400).json({ message: '邀请已处理或过期' });
     }
-
     // 检查是否过期
     if (invitation.expires_at && new Date() > invitation.expires_at) {
       invitation.status = 'expired';

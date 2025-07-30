@@ -1,5 +1,5 @@
 import { TeamProgress } from '../config/Sequelize.js';
-import { ProgressComment } from '../config/Sequelize.js';
+import { ProgressComment} from '../config/Sequelize.js';
 import { User } from '../config/Sequelize.js';
 import { Op } from 'sequelize';
 import { getPagination, getPagingData } from '../utils/pagination.js';
@@ -8,6 +8,7 @@ import {
     getCommentOr404,
     checkPermission
   } from "../utils/ProgressUtil.js";
+import { Sequelize } from 'sequelize';
 export const progressController = {
   /**
    * @route POST /api/team/:teamId/progress
@@ -245,32 +246,56 @@ export const progressController = {
    * @desc 获取某条进度下的一级评论
    * @access Public
    */
-  getCommentsForProgress: async (req, res) => {
+  getCommentsForProgress : async (req, res) => {
     try {
       const { progressId } = req.params;
       const { page, size } = req.query;
       const { limit, offset } = getPagination(page, size);
 
-      const data = await ProgressComment.findAndCountAll({
+      // 检查进度是否存在
+      const progress = await TeamProgress.findByPk(progressId);
+      if (!progress) {
+        return res.status(404).json({ message: '进度未找到' });
+      }
+
+    const data = await ProgressComment.findAndCountAll({
         where: {
           progress_id: progressId,
-          parent_comment_id: { [Op.is]: null }
+          parent_comment_id: { [Op.is]: null }, // 顶级评论
         },
-        include: [{
-          model: User,
-          as: 'author',
-          attributes: ['id', 'name', 'avatar_key']
-        }],
+        attributes: {
+          include: [
+            [
+              Sequelize.literal(`(
+                SELECT COUNT(*)
+                FROM progress_comments AS childComments
+                WHERE childComments.parent_comment_id = \`ProgressComment\`.\`comment_id\`
+              )`),
+              'reply_count',
+            ],
+          ],
+        },
+        include: [
+          {
+            model: User,
+            as: 'author',
+            attributes: ['id', 'name', 'avatar_key'],
+          },
+        ],
         limit,
         offset,
-        order: [['created_at', 'ASC']]
+        order: [['created_at', 'ASC']],
+        subQuery: false, // 避免嵌套子查询
       });
 
       const response = getPagingData(data, page, limit);
       res.status(200).json(response);
     } catch (error) {
       console.error('获取进度评论失败:', error);
-      res.status(500).json({ message: '服务器错误。', error: error.message });
+      res.status(500).json({
+        message: '服务器错误',
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+      });
     }
   },
 
