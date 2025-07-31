@@ -11,7 +11,7 @@
  Target Server Version : 80042 (8.0.42-0ubuntu0.24.04.1)
  File Encoding         : 65001
 
- Date: 19/07/2025 16:59:35
+ Date: 30/07/2025 12:32:58
 */
 
 SET NAMES utf8mb4;
@@ -39,14 +39,14 @@ DROP TABLE IF EXISTS `chat_rooms`;
 CREATE TABLE `chat_rooms`  (
   `room_id` int NOT NULL AUTO_INCREMENT,
   `type` enum('team','private') CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '聊天室类型: team=团队聊天, private=私聊',
-  `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '可选名称',
+  `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '可选名称（如私聊时可用“用户A和用户B”）',
   `team_id` int NULL DEFAULT NULL COMMENT '关联的团队ID（仅当type为team时使用）',
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`room_id`) USING BTREE,
   INDEX `team_id`(`team_id` ASC) USING BTREE,
   CONSTRAINT `chat_rooms_ibfk_1` FOREIGN KEY (`team_id`) REFERENCES `teams` (`team_id`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 18 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 25 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Table structure for collections
@@ -105,7 +105,7 @@ CREATE TABLE `friend_invitations`  (
   INDEX `idx_email`(`email` ASC) USING BTREE,
   CONSTRAINT `fk_friend_invitee` FOREIGN KEY (`invitee_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
   CONSTRAINT `fk_friend_inviter` FOREIGN KEY (`inviter_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 6 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 7 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Table structure for invitations
@@ -129,7 +129,7 @@ CREATE TABLE `invitations`  (
   CONSTRAINT `invitations_ibfk_1` FOREIGN KEY (`team_id`) REFERENCES `teams` (`team_id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
   CONSTRAINT `invitations_ibfk_2` FOREIGN KEY (`invited_by`) REFERENCES `users` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
   CONSTRAINT `invitations_ibfk_3` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 15 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 17 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Table structure for likes
@@ -215,7 +215,7 @@ CREATE TABLE `posts`  (
   PRIMARY KEY (`post_id`) USING BTREE,
   INDEX `user_id`(`user_id` ASC) USING BTREE,
   CONSTRAINT `posts_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 118 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 124 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Table structure for private_chats
@@ -271,7 +271,7 @@ CREATE TABLE `project_results`  (
   INDEX `post_id`(`post_id` ASC) USING BTREE,
   CONSTRAINT `project_results_ibfk_1` FOREIGN KEY (`team_id`) REFERENCES `teams` (`team_id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
   CONSTRAINT `project_results_ibfk_2` FOREIGN KEY (`post_id`) REFERENCES `posts` (`post_id`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 2 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 3 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Table structure for refresh_tokens
@@ -287,7 +287,7 @@ CREATE TABLE `refresh_tokens`  (
   UNIQUE INDEX `refresh_token`(`refresh_token` ASC) USING BTREE,
   INDEX `fk_user_id`(`user_id` ASC) USING BTREE,
   CONSTRAINT `fk_user_id` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 127 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 133 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Table structure for tags
@@ -300,7 +300,7 @@ CREATE TABLE `tags`  (
   `updated_at` datetime NOT NULL,
   PRIMARY KEY (`tag_id`) USING BTREE,
   UNIQUE INDEX `unique_tag_name`(`tag_name` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 29 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 30 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Table structure for team_progress
@@ -350,7 +350,7 @@ CREATE TABLE `teams`  (
   `is_public` tinyint(1) NOT NULL DEFAULT 1 COMMENT '是否公开加入: 1=公开, 0=仅邀请',
   PRIMARY KEY (`team_id`) USING BTREE,
   INDEX `team_name`(`team_name` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 20 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 27 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Table structure for user_follows

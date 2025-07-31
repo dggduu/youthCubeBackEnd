@@ -5,7 +5,7 @@ import { Likes } from '../config/Sequelize.js';
 import { Op } from '../config/Sequelize.js';
 import { Sequelize } from 'sequelize';
 import { getPagination, getPagingData } from '../utils/pagination.js';
-
+import { getFilter } from "../utils/sensitiveWordFilter.js";
 // 导出 commentController 对象
 export const commentController = {
   /**
@@ -19,18 +19,24 @@ export const commentController = {
       const { content, parent_comment_id } = req.body;
       const user_id = req.user.userId;
       if (!content) {
-        return res.status(400).json({ message: 'Comment content cannot be empty.' });
+        return res.status(400).json({ message: '评论内容不能为空' });
       }
+      const filter = getFilter();
+      const result = filter.filter(content, { replace: false });
+      if (result.words.length > 0) {
+        return res.status(422).json({message : "含有敏感词"});
+      }
+
 
       const post = await Posts.findByPk(postId);
       if (!post) {
-        return res.status(404).json({ message: 'Post not found.' });
+        return res.status(404).json({ message: '未找到文章' });
       }
 
       if (parent_comment_id) {
         const parentComment = await Comments.findByPk(parent_comment_id);
         if (!parentComment) {
-          return res.status(404).json({ message: 'Parent comment not found.' });
+          return res.status(404).json({ message: '夫评论未找到' });
         }
       }
 

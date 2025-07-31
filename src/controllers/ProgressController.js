@@ -9,6 +9,7 @@ import {
     checkPermission
   } from "../utils/ProgressUtil.js";
 import { Sequelize } from 'sequelize';
+import { getFilter } from "../utils/sensitiveWordFilter.js";
 export const progressController = {
   /**
    * @route POST /api/team/:teamId/progress
@@ -33,6 +34,16 @@ export const progressController = {
       }
       if (!event_time) {
         return res.status(400).json({ message: '事件时间(event_time)不能为空。' });
+      }
+      
+      const result = filter.filter(title, { replace: false });
+      if (result.words.length > 0) {
+        return res.status(422).json({message : "标题含有敏感词"});
+      }
+      const filter = getFilter();
+      const DesResult = filter.filter(description, { replace: false });
+      if (DesResult.words.length > 0) {
+        return res.status(422).json({message : "内容含有敏感词"});
       }
 
       const newProgress = await TeamProgress.create({
@@ -221,7 +232,11 @@ export const progressController = {
           return res.status(404).json({ message: '父评论不存在或不属于此进度。' });
         }
       }
-
+      const filter = getFilter();
+      const result = filter.filter(content, { replace: false });
+      if (result.words.length > 0) {
+        return res.status(422).json({message : "含有敏感词"});
+      }
       const newComment = await ProgressComment.create({
         progress_id: progressId,
         user_id,

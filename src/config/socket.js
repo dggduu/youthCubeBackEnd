@@ -86,7 +86,6 @@ export function setupSocketIO(server) {
         const result = filter.filter(content, { replace: false });
 
         if (result.words.length > 0) {
-          logger.warn(`敏感词拦截：${result.words.join(', ')}`);
           return socket.emit('message:error', {
             message: '消息包含敏感词，请修改后再发送',
             forbiddenWords: result.words,

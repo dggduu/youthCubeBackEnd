@@ -4,7 +4,7 @@ import { UserFollows } from '../config/Sequelize.js';
 import { Team } from '../config/Sequelize.js';
 import { Op } from '../config/Sequelize.js';
 import { getPagination, getPagingData } from '../utils/pagination.js';
-
+import { getFilter } from "../utils/sensitiveWordFilter.js";
 export const userController = {
   /**
    * @route GET /api/users
@@ -97,6 +97,16 @@ export const userController = {
       }
 
       const { name, birth_date, learn_stage, email, sex, avatar_key, is_member, password, team_id, bio } = req.body;
+
+      const filter = getFilter();
+      const result = filter.filter(name , { replace: false });
+      if (result.words.length > 0) {
+        return res.status(422).json({message : "名称含有敏感词"});
+      }
+      const bioresult = filter.filter(bio , { replace: false });
+      if (bioresult.words.length > 0) {
+        return res.status(422).json({message : "简介含有敏感词"});
+      }
 
       const [updated] = await User.update(
         { name, birth_date, learn_stage, email, sex, avatar_key, is_member, password, team_id, bio },

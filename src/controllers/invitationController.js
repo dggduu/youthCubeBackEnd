@@ -1,7 +1,7 @@
 import { Op } from '../config/Sequelize.js';
 import { getPagination, getPagingData } from '../utils/pagination.js';
 import { Invitation, Team, User, FriendInvitation, ChatRoomMember, UserFollows, ChatRoom } from "../config/Sequelize.js";
-
+import { getFilter } from "../utils/sensitiveWordFilter.js";
 export const invitationController = {
   /**
    * @route GET /api/invitations/team
@@ -131,7 +131,11 @@ export const invitationController = {
       if (existing) {
         return res.status(400).json({ message: 'Invitation already exists.' });
       }
-
+      const filter = getFilter();
+      const result = filter.filter(description , { replace: false });
+      if (result.words.length > 0) {
+        return res.status(422).json({message : "描述含有敏感词"});
+      }
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + 7); // 7天有效期
 
@@ -184,6 +188,12 @@ export const invitationController = {
 
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + 7); // 7天有效期
+
+      const filter = getFilter();
+      const result = filter.filter(desciption , { replace: false });
+      if (result.words.length > 0) {
+        return res.status(422).json({message : "描述含有敏感词"});
+      }
 
       const invitation = await FriendInvitation.create({
         inviter_id: currentUserId,

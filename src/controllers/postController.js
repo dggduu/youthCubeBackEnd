@@ -10,7 +10,7 @@ import { collections, Team, ProjectResult } from '../config/Sequelize.js';
 import { Op } from '../config/Sequelize.js';
 import logger from "../config/pino.js";
 import { getPagination, getPagingData } from '../utils/pagination.js';
-
+import { getFilter } from "../utils/sensitiveWordFilter.js";
 // 导出 postController 对象
 export const postController = {
   /**
@@ -25,6 +25,16 @@ export const postController = {
       console.log(user_id,title,content,tagIds);
       if (!title || !content || !user_id) {
         return res.status(400).json({ message: 'Title, content, and user ID are required.' });
+      }
+      const filter = getFilter();
+      const result = filter.filter(title, { replace: false });
+      if (result.words.length > 0) {
+        return res.status(422).json({message : "标题含有敏感词"});
+      }
+      
+      const ConResult = filter.filter(content, { replace: false });
+      if (ConResult.words.length > 0) {
+        return res.status(422).json({message : "内容含有敏感词"});
       }
 
       const newPost = await Posts.create({
@@ -78,6 +88,16 @@ export const postController = {
         return res.status(400).json({
           message: '报告类型必须是 article 或 manual'
         });
+      }
+      const filter = getFilter();
+      const result = filter.filter(title, { replace: false });
+      if (result.words.length > 0) {
+        return res.status(422).json({message : "标题含有敏感词"});
+      }
+      
+      const ConResult = filter.filter(content, { replace: false });
+      if (ConResult.words.length > 0) {
+        return res.status(422).json({message : "内容含有敏感词"});
       }
 
       // 1. 创建帖子

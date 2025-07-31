@@ -3,7 +3,7 @@ import { Posts, Team, ChatRoom, ChatRoomMember } from '../config/Sequelize.js';
 import { Op } from '../config/Sequelize.js';
 
 import { getPagination, getPagingData } from '../utils/pagination.js';
-
+import { getFilter } from "../utils/sensitiveWordFilter.js";
 export const tagController = {
   /**
    * @route POST /api/tags
@@ -21,6 +21,12 @@ export const tagController = {
       const existingTag = await tags.findOne({ where: { tag_name } });
       if (existingTag) {
         return res.status(409).json({ message: 'Tag with this name already exists.' });
+      }
+
+      const filter = getFilter();
+      const result = filter.filter(tag_name, { replace: false });
+      if (result.words.length > 0) {
+        return res.status(422).json({message : "标签含有敏感词"});
       }
 
       const newTag = await tags.create({ tag_name });

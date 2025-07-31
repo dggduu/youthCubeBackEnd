@@ -3,7 +3,7 @@ import { Op, sequelize } from '../config/Sequelize.js';
 
 
 import { getPagination, getPagingData } from '../utils/pagination.js';
-
+import { getFilter } from "../utils/sensitiveWordFilter.js";
 export const teamController = {
   /**
    * @route POST /api/teams
@@ -41,7 +41,15 @@ export const teamController = {
         await transaction.rollback();
         return res.status(400).json({ message: '您已加入其他队伍，请先退出' });
       }
-
+      const filter = getFilter();
+      const result = filter.filter(team_name , { replace: false });
+      if (result.words.length > 0) {
+        return res.status(422).json({message : "队名含有敏感词"});
+      }
+      const DesResult = filter.filter(description , { replace: false });
+      if (DesResult.words.length > 0) {
+        return res.status(422).json({message : "描述含有敏感词"});
+      }
       // 创建队伍
       const newTeam = await Team.create({
         team_name,
