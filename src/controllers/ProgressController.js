@@ -36,11 +36,12 @@ export const progressController = {
         return res.status(400).json({ message: '事件时间(event_time)不能为空。' });
       }
       
+      const filter = getFilter();
       const result = filter.filter(title, { replace: false });
       if (result.words.length > 0) {
         return res.status(422).json({message : "标题含有敏感词"});
       }
-      const filter = getFilter();
+      
       const DesResult = filter.filter(description, { replace: false });
       if (DesResult.words.length > 0) {
         return res.status(422).json({message : "内容含有敏感词"});

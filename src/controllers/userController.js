@@ -96,7 +96,7 @@ export const userController = {
         return res.status(403).json({ message: 'Forbidden: You can only update your own profile.' });
       }
 
-      const { name, birth_date, learn_stage, email, sex, avatar_key, is_member, password, team_id, bio } = req.body;
+      const { name, birth_date, learn_stage, email, sex, avatar_key, is_member, password, bio } = req.body;
 
       const filter = getFilter();
       const result = filter.filter(name , { replace: false });
@@ -109,7 +109,7 @@ export const userController = {
       }
 
       const [updated] = await User.update(
-        { name, birth_date, learn_stage, email, sex, avatar_key, is_member, password, team_id, bio },
+        { name, birth_date, learn_stage, email, sex, avatar_key, is_member, password, bio },
         {
           where: { id },
           individualHooks: true,

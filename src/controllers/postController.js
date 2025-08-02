@@ -31,11 +31,6 @@ export const postController = {
       if (result.words.length > 0) {
         return res.status(422).json({message : "标题含有敏感词"});
       }
-      
-      const ConResult = filter.filter(content, { replace: false });
-      if (ConResult.words.length > 0) {
-        return res.status(422).json({message : "内容含有敏感词"});
-      }
 
       const newPost = await Posts.create({
         user_id,
@@ -93,11 +88,6 @@ export const postController = {
       const result = filter.filter(title, { replace: false });
       if (result.words.length > 0) {
         return res.status(422).json({message : "标题含有敏感词"});
-      }
-      
-      const ConResult = filter.filter(content, { replace: false });
-      if (ConResult.words.length > 0) {
-        return res.status(422).json({message : "内容含有敏感词"});
       }
 
       // 1. 创建帖子

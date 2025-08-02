@@ -33,7 +33,7 @@ const app = express();
 // 速率限制
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  limit: 10,
+  limit: 200,
   standardHeaders: 'draft-8',
   legacyHeaders: false,
 });
@@ -52,7 +52,7 @@ app.use(express.json());
 app.use(cors({ origin: '*' }));
 app.use(helmet());
 app.use(morgan('dev'));
-// app.use(limiter);
+app.use(limiter);
 
 // 连接数据库
 connectDB();

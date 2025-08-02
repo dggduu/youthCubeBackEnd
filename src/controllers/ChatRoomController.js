@@ -2,6 +2,7 @@ import { ChatRoom } from '../config/Sequelize.js';
 import { ChatRoomMember, PrivateChat, UserFollows, Op, User, Message, sequelize, Invitation,Team } from '../config/Sequelize.js';
 import logger from "../config/pino.js";
 import { getPagination, getPagingData } from "../utils/pagination.js";
+import { getFilter } from "../utils/sensitiveWordFilter.js";
 export const chatRoomController = {
   /**
    * @route PUT /api/chatrooms/:room_id
@@ -746,6 +747,13 @@ respondToInvitation: async (req, res) => {
       invitation.status = 'rejected';
     }
 
+    await User.update(
+      { team_id: invitation.team_id },
+      { 
+        where: { id: invitedUserId },
+      }
+    );
+
     await invitation.save();
 
     return res.json({
@@ -794,6 +802,16 @@ respondToInvitation: async (req, res) => {
       if (!chatRoom || !chatRoom.members || 
           !['owner', 'co_owner'].includes(chatRoom.members[0].role)) {
         return res.status(403).json({ message: '无权限操作' });
+      }
+
+      const filter = getFilter();
+      const result = filter.filter(team_name , { replace: false });
+      if (result.words.length > 0) {
+        return res.status(422).json({message : "队名含有敏感词"});
+      }
+      const Desresult = filter.filter(description , { replace: false });
+      if (Desresult.words.length > 0) {
+        return res.status(422).json({message : "队名含有敏感词"});
       }
 
       // 更新团队信息
