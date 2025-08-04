@@ -83,7 +83,7 @@ const server = http.createServer(app);
 const io = setupSocketIO(server);
 
 // 启动服务
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3166;
 server.listen(PORT, () => {
   logger.info(`服务正在此端口运行: http://localhost:${PORT}`);
 });
