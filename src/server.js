@@ -19,6 +19,7 @@ import UserRoutes from "./routes/UserRoutes.js";
 import InviteRouters from "./routes/InvitationRouter.js";
 import ChatRoomRouters from "./routes/ChatRoomRouters.js";
 import ProgessRouters from "./routes/ProgessRouters.js";
+import ThoughtBulletRouters from "./routes/ThoughtBulletRouters.js";
 import http from 'http';
 import { setupSocketIO } from './config/socket.js';
 import session from 'express-session';
@@ -33,7 +34,7 @@ const app = express();
 // 速率限制
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  limit: 200,
+  limit: 300,
   standardHeaders: 'draft-8',
   legacyHeaders: false,
 });
@@ -69,6 +70,7 @@ app.use('/v1/dl', downloadRoute);
 app.use('/v1', InviteRouters);
 app.use("/v1", ChatRoomRouters);
 app.use("/v1", ProgessRouters);
+app.use("/v1", ThoughtBulletRouters);
 
 // 错误处理中间件
 app.use((err, req, res, next) => {

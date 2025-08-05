@@ -21,7 +21,6 @@ export const progressController = {
       const { teamId } = req.params;
       const { description, status = 'pending', timeline_type, title, event_time } = req.body;
       const submit_user_id = req.user.userId;
-
       // 校验必填字段
       if (!description) {
         return res.status(400).json({ message: '描述内容不能为空。' });
@@ -157,27 +156,32 @@ export const progressController = {
    * @access Private (仅创建者或管理员)
    */
   updateProgress: async (req, res) => {
-    try {
-      const { id } = req.params;
-      const { description, status } = req.body;
-      const user_id = req.user.userId;
+      try {
+        const { id } = req.params;
+        const { title, content, timeline_type, event_time } = req.body;
+        const user_id = req.user.userId;
 
-      const progress = await getProgressOr404(id, res);
-      if (!progress) return;
+        const progress = await getProgressOr404(id, res);
+        if (!progress) return;
 
-      if (!checkPermission(res, progress.submit_user_id, user_id)) return;
+        if (!checkPermission(res, progress.submit_user_id, user_id)) return;
+        
+        await progress.update({
+          title,
+          content,
+          timeline_type,
+          event_time,
+        });
 
-      await progress.update({ description, status });
+        const updatedProgress = await TeamProgress.findByPk(id, {
+          include: [{ model: User, as: 'submitter', attributes: ['id', 'name', 'avatar_key'] }]
+        });
 
-      const updatedProgress = await TeamProgress.findByPk(id, {
-        include: [{ model: User, as: 'submitter', attributes: ['id', 'name', 'avatar_key'] }]
-      });
-
-      res.status(200).json({ message: '进度更新成功', progress: updatedProgress });
-    } catch (error) {
-      console.error('更新进度失败:', error);
-      res.status(500).json({ message: '服务器错误。', error: error.message });
-    }
+        res.status(200).json({ message: '进度更新成功', progress: updatedProgress });
+      } catch (error) {
+        console.error('更新进度失败:', error);
+        res.status(500).json({ message: '服务器错误。', error: error.message });
+      }
   },
 
   /**
@@ -202,11 +206,7 @@ export const progressController = {
       res.status(500).json({ message: '服务器错误。', error: error.message });
     }
   },
-
-
-  // ========== 评论相关接口 ==========
-
-
+  
   /**
    * @route POST /api/progress/:progressId/comments
    * @desc 给进度添加评论
