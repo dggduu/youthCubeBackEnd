@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>限时推广 | 企业级会员尊享计划</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: #f5f7fa;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 680px;
+            margin: 10px auto;
+            background: #fff;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, #1a3a6e, #2c5aa0);
+            color: white;
+            padding: 30px 20px;
+            text-align: center;
+            position: relative;
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+
+        .tagline {
+            font-size: 16px;
+            opacity: 0.9;
+            margin-bottom: 15px;
+        }
+
+        .badge {
+            display: inline-block;
+            background: #ff6b35;
+            color: white;
+            padding: 6px 16px;
+            font-size: 14px;
+            border-radius: 20px;
+            font-weight: 500;
+            transform: translateY(-4px);
+        }
+
+        /* Hero Banner */
+        .hero {
+            padding: 40px 30px;
+            text-align: center;
+            background: url('https://via.placeholder.com/800x300?text=Exclusive+Offer') no-repeat center/cover;
+            position: relative;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(26, 58, 110, 0.7);
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 1;
+            color: white;
+        }
+
+        .hero-title {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+
+        .hero-subtitle {
+            font-size: 16px;
+            opacity: 0.95;
+            max-width: 500px;
+            margin: 0 auto 20px;
+        }
+
+        /* Features */
+        .features {
+            padding: 30px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .section-title {
+            font-size: 20px;
+            color: #1a3a6e;
+            margin-bottom: 20px;
+            font-weight: 600;
+            text-align: center;
+        }
+
+        .feature-list {
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .feature-item {
+            flex: 1;
+            min-width: 180px;
+            text-align: center;
+            padding: 20px 15px;
+            background: #f0f5ff;
+            border-radius: 12px;
+            border: 1px solid #e0e7ff;
+        }
+
+        .feature-icon {
+            font-size: 32px;
+            margin-bottom: 10px;
+            color: #2c5aa0;
+        }
+
+        .feature-label {
+            font-size: 15px;
+            font-weight: 500;
+            color: #333;
+        }
+
+        .feature-desc {
+            font-size: 13px;
+            color: #666;
+            margin-top: 6px;
+        }
+
+        /* CTA Button */
+        .cta-container {
+            padding: 20px 30px;
+            text-align: center;
+            background: #f9fafa;
+        }
+
+        .cta-btn {
+            display: inline-block;
+            background: linear-gradient(45deg, #ff6b35, #e63946);
+            color: white;
+            font-size: 18px;
+            font-weight: 600;
+            padding: 16px 60px;
+            border-radius: 50px;
+            text-decoration: none;
+            box-shadow: 0 6px 20px rgba(255, 107, 53, 0.4);
+            transition: all 0.3s ease;
+            animation: pulse 2s infinite;
+        }
+
+        .cta-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(255, 107, 53, 0.5);
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 6px 20px rgba(255, 107, 53, 0.4); }
+            50% { box-shadow: 0 6px 20px rgba(255, 107, 53, 0.7); }
+            100% { box-shadow: 0 6px 20px rgba(255, 107, 53, 0.4); }
+        }
+
+        /* Countdown */
+        .countdown-box {
+            background: #1a3a6e;
+            color: white;
+            padding: 16px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 500;
+            text-align: center;
+            margin: 20px 30px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .countdown-num {
+            display: inline-block;
+            width: 42px;
+            background: white;
+            color: #1a3a6e;
+            margin: 0 4px;
+            padding: 4px 0;
+            border-radius: 6px;
+            font-weight: bold;
+        }
+
+        /* Footer */
+        .footer {
+            padding: 20px;
+            text-align: center;
+            font-size: 13px;
+            color: #999;
+            background: #f9fafa;
+            border-top: 1px solid #eee;
+        }
+
+        .disclaimer {
+            font-size: 12px;
+            margin-top: 8px;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="logo">智启未来 · 企业服务</div>
+            <div class="tagline">赋能商业增长 · 共赢数字时代</div>
+            <div class="badge">限时尊享 · 仅限8月</div>
+        </div>
+
+        <!-- Hero Banner -->
+        <div class="hero">
+            <div class="hero-content">
+                <h1 class="hero-title">企业会员限时升级计划</h1>
+                <p class="hero-subtitle">即刻加入，尊享全年服务折扣 + 专属顾问支持 + 品牌曝光资源</p>
+            </div>
+        </div>
+
+        <!-- Countdown -->
+        <div class="countdown-box">
+            限时优惠倒计时：
+            <span id="day" class="countdown-num">00</span>天
+            <span id="hour" class="countdown-num">00</span>时
+            <span id="minute" class="countdown-num">00</span>分
+        </div>
+
+        <!-- Features -->
+        <div class="features">
+            <h2 class="section-title">✨ 会员尊享权益</h2>
+            <div class="feature-list">
+                <div class="feature-item">
+                    <div class="feature-icon">💼</div>
+                    <div class="feature-label">专属客户经理</div>
+                    <div class="feature-desc">1对1服务，快速响应</div>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon">📉</div>
+                    <div class="feature-label">年度服务8折</div>
+                    <div class="feature-desc">节省成本高达20%</div>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon">📈</div>
+                    <div class="feature-label">品牌联合推广</div>
+                    <div class="feature-desc">百万级流量曝光支持</div>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon">🛠️</div>
+                    <div class="feature-label">优先技术支持</div>
+                    <div class="feature-desc">7×24小时快速通道</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CTA -->
+        <div class="cta-container">
+            <a href="#apply" class="cta-btn">立即申请 →</a>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p>活动时间：2025年8月1日 - 2025年8月31日</p>
+            <p class="disclaimer">
+                本活动面向企业客户开放，需提交营业执照审核。<br>
+                最终解释权归智启未来科技有限公司所有。
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // 倒计时逻辑
+        function updateCountdown() {
+            const end = new Date('2025-08-31T23:59:59').getTime();
+            const now = new Date().getTime();
+            const diff = end - now;
+
+            if (diff <= 0) {
+                document.getElementById('day').textContent = '00';
+                document.getElementById('hour').textContent = '00';
+                document.getElementById('minute').textContent = '00';
+                return;
+            }
+
+            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+
+            document.getElementById('day').textContent = days.toString().padStart(2, '0');
+            document.getElementById('hour').textContent = hours.toString().padStart(2, '0');
+            document.getElementById('minute').textContent = minutes.toString().padStart(2, '0');
+        }
+
+        // 初始化并每分钟更新一次
+        updateCountdown();
+        setInterval(updateCountdown, 60000);
+    </script>
+</body>
+</html>

@@ -24,6 +24,8 @@ import http from 'http';
 import { setupSocketIO } from './config/socket.js';
 import session from 'express-session';
 import { getFilter } from "./utils/sensitiveWordFilter.js";
+import staticRouters from "./routes/staticRouters.js";
+import TeamAnnouncementRouters from "./routes/TeamAnnouncementRouters.js";
 
 // 加载环境变量
 dotenv.config();
@@ -34,7 +36,28 @@ const app = express();
 // 速率限制
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  limit: 300,
+  limit: 400,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+});
+
+const uploadLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 500,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+});
+
+const dlLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 500,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+});
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
   standardHeaders: 'draft-8',
   legacyHeaders: false,
 });
@@ -59,18 +82,20 @@ app.use(limiter);
 connectDB();
 
 // 路由
-app.use('/v1', authRoutes);
+app.use('/v1', authLimiter, authRoutes);
 app.use('/v1', CommentRoutes);
 app.use('/v1', PostRoutes);
 app.use('/v1', TagRoutes);
 app.use('/v1', TeamRoutes);
 app.use('/v1', UserRoutes);
-app.use('/v1/upload', uploadRoutes);
-app.use('/v1/dl', downloadRoute);
+app.use('/v1/upload', uploadLimiter, uploadRoutes);
+app.use('/v1/dl', dlLimiter, downloadRoute);
 app.use('/v1', InviteRouters);
 app.use("/v1", ChatRoomRouters);
 app.use("/v1", ProgessRouters);
+app.use("/v1", staticRouters);
 app.use("/v1", ThoughtBulletRouters);
+app.use("/v1", TeamAnnouncementRouters);
 
 // 错误处理中间件
 app.use((err, req, res, next) => {

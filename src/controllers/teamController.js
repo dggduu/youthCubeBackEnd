@@ -1,4 +1,4 @@
-import { Team, TeamTag, tags, ChatRoom, ChatRoomMember,ProjectResult, User, Invitation,Message } from '../config/Sequelize.js';
+import { Team, TeamTag, tags, ChatRoom, ChatRoomMember,ProjectResult, User, Invitation,Message, TeamAnnouncement } from '../config/Sequelize.js';
 import { Op, sequelize } from '../config/Sequelize.js';
 
 
@@ -107,7 +107,7 @@ export const teamController = {
 
   /**
    * @route GET /api/teams
-   * @desc Get all teams with pagination and search
+   * @desc Get all top-level public teams (exclude sub-teams) with pagination and search
    * @access Public
    */
   getAllTeams: async (req, res) => {
@@ -115,9 +115,10 @@ export const teamController = {
       const { page, size, search } = req.query;
       const { limit, offset } = getPagination(page, size);
 
-      // 构建 where 查询条件：仅查询 is_public = 1 的团队
+      // 仅查询顶层团队
       const whereCondition = {
         is_public: 1,
+        parent_team_id: null,
         ...(search && { team_name: { [Op.like]: `%${search}%` } }),
       };
 
@@ -137,6 +138,7 @@ export const teamController = {
       });
 
       const teams = data.rows;
+      // 限制每个团队最多返回 3 个标签
       teams.forEach(team => {
         if (team.tags && team.tags.length > 3) {
           team.tags = team.tags.slice(0, 3);
@@ -153,7 +155,7 @@ export const teamController = {
 
   /**
    * @route GET /api/teams/:id
-   * @desc Get a team by ID
+   * @desc Get a team by ID, including its sub-teams
    * @access Public
    */
   getTeamById: async (req, res) => {
@@ -162,12 +164,15 @@ export const teamController = {
 
       const team = await Team.findByPk(id, {
         include: [
+          // 标签
           {
             model: tags,
             as: 'tags',
             attributes: ['tag_id', 'tag_name'],
-            through: { attributes: [] }
+            through: { attributes: [] },
+            required: false
           },
+          // 项目成果
           {
             model: ProjectResult,
             as: 'projectResults',
@@ -181,10 +186,11 @@ export const teamController = {
               [sequelize.literal(`CASE WHEN projectResults.type = 'article' THEN projectResults.post_id ELSE NULL END`), 'post_id']
             ]
           },
+          // 聊天室及成员
           {
             model: ChatRoom,
             as: 'chatRoom',
-            attributes: ['room_id','name'],
+            attributes: ['room_id', 'name'],
             include: [{
               model: ChatRoomMember,
               as: 'members',
@@ -195,6 +201,36 @@ export const teamController = {
                 attributes: ['id', 'name', 'avatar_key']
               }]
             }]
+          },
+          // 查询子团队
+          {
+            model: Team,
+            as: 'subTeams',
+            attributes: [
+              'team_id', 
+              'team_name', 
+              'description', 
+              'create_at', 
+              'grade', 
+              'is_public'
+            ],
+            include: [
+              // 子团队的标签
+              {
+                model: tags,
+                as: 'tags',
+                attributes: ['tag_id', 'tag_name'],
+                through: { attributes: [] },
+                required: false
+              },
+              // 子团队的聊天室
+              {
+                model: ChatRoom,
+                as: 'chatRoom',
+                required: false
+              }
+            ],
+            required: false
           }
         ]
       });
@@ -205,6 +241,7 @@ export const teamController = {
 
       const teamData = team.get({ plain: true });
 
+      // 处理聊天室成员信息
       if (teamData.chatRoom?.members) {
         teamData.chatRoom.members = teamData.chatRoom.members.map(member => ({
           user_id: member.user_id,
@@ -213,6 +250,15 @@ export const teamController = {
           role: member.role,
           joined_at: member.joined_at
         }));
+      }
+
+      // 处理子团队标签数量限制（最多3个）
+      if (teamData.subTeams) {
+        teamData.subTeams.forEach(sub => {
+          if (sub.tags && sub.tags.length > 3) {
+            sub.tags = sub.tags.slice(0, 3);
+          }
+        });
       }
 
       res.status(200).json(teamData);
@@ -230,26 +276,40 @@ export const teamController = {
   updateTeam: async (req, res) => {
     try {
       const { id } = req.params;
-      const { team_name, description, is_public } = req.body;
+      const { team_name, description, is_public, grade } = req.body;
 
-      if (!team_name) {
-        return res.status(400).json({ message: 'Team name is required.' });
+      const updateFields = {};
+      if (team_name !== undefined) updateFields.team_name = team_name;
+      if (description !== undefined) updateFields.description = description;
+      if (is_public !== undefined) updateFields.is_public = is_public;
+      if (grade !== undefined) updateFields.grade = grade;
+
+      if (Object.keys(updateFields).length === 0) {
+        return res.status(400).json({ message: 'No fields to update.' });
       }
 
-      const [updated] = await Team.update(
-        { team_name, description, is_public },
-        { where: { team_id: id } }
-      );
+      // 执行更新
+      const [updatedCount] = await Team.update(updateFields, {
+        where: { team_id: id }
+      });
 
-      if (updated) {
-        const updatedTeam = await Team.findByPk(id);
-        return res.status(200).json({ message: 'Team updated successfully.', team: updatedTeam });
+      if (updatedCount === 0) {
+        return res.status(404).json({ message: 'Team not found or no changes made.' });
       }
 
-      res.status(404).json({ message: 'Team not found or no changes made.' });
+      // 返回更新后的团队信息
+      const updatedTeam = await Team.findByPk(id);
+      return res.status(200).json({
+        message: 'Team updated successfully.',
+        team: updatedTeam
+      });
+
     } catch (error) {
       console.error('Update team error:', error);
-      res.status(500).json({ message: 'Server error.', error: error.message });
+      res.status(500).json({
+        message: 'Server error.',
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
     }
   },
 
@@ -264,7 +324,7 @@ export const teamController = {
       const { id } = req.params;
       const currentUserId = req.user.userId;
 
-      // 1. 验证团队和权限
+      // 1. 验证当前用户是否是该团队的 owner
       const team = await Team.findOne({
         where: { team_id: id },
         include: [
@@ -291,81 +351,127 @@ export const teamController = {
         });
       }
 
-      // 2. 获取所有团队成员ID
-      const members = await ChatRoomMember.findAll({
-        where: { room_id: team.chatRoom.room_id },
-        attributes: ['user_id'],
+      // 2. 递归查询所有子团队（包括子子孙孙）
+      const allTeamIds = new Set(); // 使用 Set 防止重复
+      const visited = new Set();
+
+      const collectSubTeams = async (parentId) => {
+        if (visited.has(parentId)) return; // 防止循环引用
+        visited.add(parentId);
+
+        const subTeams = await Team.findAll({
+          where: { parent_team_id: parentId },
+          attributes: ['team_id'],
+          transaction,
+        });
+
+        for (const subTeam of subTeams) {
+          if (!allTeamIds.has(subTeam.team_id)) {
+            allTeamIds.add(subTeam.team_id);
+            await collectSubTeams(subTeam.team_id); // 递归
+          }
+        }
+      };
+
+      // 从当前团队开始，收集所有子团队
+      await collectSubTeams(id);
+      allTeamIds.add(Number(id)); // 包含自己
+
+      const teamIdsArray = Array.from(allTeamIds);
+      if (teamIdsArray.length === 0) {
+        await transaction.rollback();
+        return res.status(404).json({ message: '未找到可删除的团队' });
+      }
+
+      // 3. 获取所有相关 chatRoomIds
+      const chatRooms = await ChatRoom.findAll({
+        where: { team_id: teamIdsArray },
+        attributes: ['room_id'],
         transaction,
       });
-      const memberIds = members.map((m) => m.user_id);
+      const roomIds = chatRooms.map(cr => cr.room_id);
 
+      // 4. 批量删除所有关联数据（按依赖顺序）
+      await TeamAnnouncement.destroy({
+        where: { team_id: teamIdsArray },
+        transaction,
+      });
       // 删除项目成果
       await ProjectResult.destroy({
-        where: { team_id: id },
-        transaction,
-      });
-
-      // 3. 删除消息记录
-      await Message.destroy({
-        where: { room_id: team.chatRoom.room_id },
+        where: { team_id: teamIdsArray },
         transaction,
       });
 
       // 删除邀请
       await Invitation.destroy({
-        where: { team_id: id },
+        where: { team_id: teamIdsArray },
         transaction,
       });
 
       // 删除团队标签
       await TeamTag.destroy({
-        where: { team_id: id },
+        where: { team_id: teamIdsArray },
         transaction,
       });
 
+      // 删除聊天消息
+      await Message.destroy({
+        where: { room_id: roomIds },
+        transaction,
+      });
+
+      // 获取所有受影响的用户 ID
+      const allMembers = await ChatRoomMember.findAll({
+        where: { room_id: roomIds },
+        attributes: ['user_id'],
+        transaction,
+      });
+      const memberIds = [...new Set(allMembers.map(m => m.user_id))];
+
+      // 6. 更新用户 team_id 为 null
+      if (memberIds.length > 0) {
+        await User.update(
+          { team_id: null },
+          {
+            where: { id: memberIds },
+            transaction,
+          }
+        );
+      }
+
       // 删除聊天室成员
       await ChatRoomMember.destroy({
-        where: { room_id: team.chatRoom.room_id },
+        where: { room_id: roomIds },
         transaction,
       });
 
       // 删除聊天室
       await ChatRoom.destroy({
-        where: { room_id: team.chatRoom.room_id },
+        where: { room_id: roomIds },
         transaction,
       });
 
-      // 4. 更新成员的 team_id
-      await User.update(
-        { team_id: null },
-        {
-          where: { id: memberIds },
-          transaction,
-        }
-      );
-
-      // 5. 最后删除团队
+      // 7. 删除所有团队（包括子团队）
       await Team.destroy({
-        where: { team_id: id },
+        where: { team_id: teamIdsArray },
         transaction,
       });
 
       await transaction.commit();
+
       return res.status(204).send();
 
     } catch (error) {
       await transaction.rollback();
       console.error('删除团队失败:', error);
 
-      // 改进错误提示
       if (error.name === 'SequelizeForeignKeyConstraintError') {
         let message = '删除失败，请先清理关联数据';
         let solution = '请确保已删除所有聊天消息、项目成果等关联记录';
 
-        // 针对 project_results 特殊提示
         if (error.table === 'teams' && error.index === 'project_results_ibfk_1') {
-          message = '无法删除团队：该团队已有项目成果记录';
-          solution = '请先删除该团队提交的项目成果';
+          message = '无法删除团队：该团队或其子团队已有项目成果记录';
+          solution = '请先删除相关团队提交的项目成果';
         }
 
         return res.status(409).json({
@@ -380,6 +486,200 @@ export const teamController = {
         message: '删除团队失败',
         error: process.env.NODE_ENV === 'development' ? error.message : '服务器错误',
       });
+    }
+  },
+  /**
+   * @route POST /api/teams/:id/subteam
+   * @desc 创建子团队（仅限父团队的 owner）
+   * @access Private (Parent team owner only)
+   */
+  createSubTeam: async (req, res) => {
+    const transaction = await Team.sequelize.transaction();
+    const user_id = req.user.userId;
+    const parentTeamId = parseInt(req.params.id, 10);
+
+    try {
+      if (!parentTeamId || isNaN(parentTeamId)) {
+        return res.status(400).json({ message: '无效的父团队ID' });
+      }
+
+      const { team_name, description="" } = req.body;
+
+      if (!team_name) {
+        return res.status(400).json({ message: '需要队伍名称' });
+      }
+
+      // 校验 is_public
+      const isPublic = typeof is_public !== 'undefined' ? Boolean(is_public) : true;
+
+      // 检查当前用户是否为父团队的 owner
+      const parentTeam = await Team.findOne({
+        where: { team_id: parentTeamId },
+        include: [{
+          model: ChatRoom,
+          as: 'chatRoom',
+          include: [{
+            model: ChatRoomMember,
+            as: 'members',
+            where: { user_id, role: 'owner' },
+            required: true
+          }]
+        }],
+        transaction
+      });
+
+      if (!parentTeam) {
+        await transaction.rollback();
+        return res.status(403).json({ message: '仅父团队的组长可创建子团队' });
+      }
+
+      // 敏感词检测
+      const filter = getFilter();
+      const result = filter.filter(team_name , { replace: false });
+      if (result.words.length > 0) {
+        return res.status(422).json({message : "队名含有敏感词"});
+      }
+      if(!description){
+        const DesResult = filter.filter(description , { replace: false });
+        if (DesResult.words.length > 0) {
+          return res.status(422).json({message : "描述含有敏感词"});
+        }
+      }
+
+
+      // 创建子团队
+      const subTeam = await Team.create({
+        team_name,
+        description : "",
+        parent_team_id: parentTeamId,
+        is_public: 0, // 公开不可见
+        grade: 'mature'
+      }, { transaction });
+
+      // 创建子团队的聊天室
+      const chatRoomName = `${subTeam.team_name} 聊天室`;
+      const chatRoom = await ChatRoom.create({
+        type: 'team',
+        name: chatRoomName,
+        team_id: subTeam.team_id
+      }, { transaction });
+
+      // 设置当前用户为子团队的 owner
+      await ChatRoomMember.create({
+        room_id: chatRoom.room_id,
+        user_id,
+        role: 'owner',
+        joined_at: new Date()
+      }, { transaction });
+
+      await transaction.commit();
+
+      res.status(201).json({
+        message: '子团队创建成功',
+        subTeamId: subTeam.team_id,
+        parentTeamId
+      });
+    } catch (error) {
+      await transaction.rollback();
+      console.error('创建子团队失败:', error);
+      res.status(500).json({ message: '服务器错误', error: error.message });
+    }
+  },
+  /**
+   * @route DELETE /api/teams/:id/subteam/:subTeamId
+   * @desc 删除子团队（仅限父团队的 owner）
+   * @access Private
+   */
+  deleteSubTeam: async (req, res) => {
+    const transaction = await Team.sequelize.transaction();
+    const user_id = req.user.userId;
+    const parentTeamId = parseInt(req.params.id, 10);
+    const subTeamId = parseInt(req.params.subTeamId, 10);
+
+    try {
+      if (!parentTeamId || isNaN(parentTeamId) || !subTeamId || isNaN(subTeamId)) {
+        return res.status(400).json({ message: '无效的团队ID' });
+      }
+
+      // 1. 验证：当前用户是否为 parentTeam 的 owner
+      const parentTeam = await Team.findOne({
+        where: { team_id: parentTeamId },
+        include: [{
+          model: ChatRoom,
+          as: 'chatRoom',
+          include: [{
+            model: ChatRoomMember,
+            as: 'members',
+            where: { user_id, role: 'owner' },
+            required: true
+          }]
+        }],
+        transaction
+      });
+
+      if (!parentTeam) {
+        await transaction.rollback();
+        return res.status(403).json({ message: '仅父团队的组长可删除子团队' });
+      }
+
+      // 2. 验证：subTeam 是否确实是 parentTeam 的子团队
+      const subTeam = await Team.findOne({
+        where: { team_id: subTeamId, parent_team_id: parentTeamId },
+        include: [{
+          model: ChatRoom,
+          as: 'chatRoom'
+        }],
+        transaction
+      });
+
+      if (!subTeam) {
+        await transaction.rollback();
+        return res.status(404).json({ message: '子团队不存在或不属于该团队' });
+      }
+
+      // 3. 获取子团队的聊天室 ID
+      const roomId = subTeam.chatRoom?.room_id;
+      if (!roomId) {
+        await transaction.rollback();
+        return res.status(500).json({ message: '子团队聊天室缺失' });
+      }
+
+      // 4. 删除相关数据（与 deleteTeam 类似）
+      await ProjectResult.destroy({ where: { team_id: subTeamId }, transaction });
+      await Message.destroy({ where: { room_id: roomId }, transaction });
+      await Invitation.destroy({ where: { team_id: subTeamId }, transaction });
+      await TeamTag.destroy({ where: { team_id: subTeamId }, transaction });
+      await ChatRoomMember.destroy({ where: { room_id: roomId }, transaction });
+      await ChatRoom.destroy({ where: { room_id: roomId }, transaction });
+
+      // 5. 更新子团队成员的 team_id（设为 null）
+      const members = await ChatRoomMember.findAll({
+        where: { room_id: roomId },
+        attributes: ['user_id'],
+        transaction
+      });
+      const memberIds = members.map(m => m.user_id);
+
+      if (memberIds.length > 0) {
+        await User.update(
+          { team_id: null },
+          { where: { id: memberIds }, transaction }
+        );
+      }
+
+      // 6. 删除子团队
+      await Team.destroy({ where: { team_id: subTeamId }, transaction });
+
+      await transaction.commit();
+
+      res.status(200).json({
+        message: '子团队删除成功',
+        subTeamId
+      });
+    } catch (error) {
+      await transaction.rollback();
+      console.error('删除子团队失败:', error);
+      res.status(500).json({ message: '服务器错误', error: error.message });
     }
   }
 

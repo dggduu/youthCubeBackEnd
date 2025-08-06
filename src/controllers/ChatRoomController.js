@@ -191,75 +191,95 @@ export const chatRoomController = {
     }
   },
   createPrivateChat: async (req, res) => {
+    const transaction = await ChatRoomMember.sequelize.transaction();
+
+    try {
       const userId = req.user.userId;
       const { targetUserId } = req.body;
 
       if (!targetUserId || typeof targetUserId !== 'number') {
-          return res.status(400).json({ message: '请提供有效的目标用户ID' });
+        await transaction.rollback();
+        return res.status(400).json({ message: '请提供有效的目标用户ID' });
       }
 
       if (userId === targetUserId) {
-          return res.status(400).json({ message: '不能与自己私聊' });
+        await transaction.rollback();
+        return res.status(400).json({ message: '不能与自己私聊' });
       }
 
       // 确保 user1_id < user2_id
       const user1_id = Math.min(userId, targetUserId);
       const user2_id = Math.max(userId, targetUserId);
 
-      try {
-          const existingPrivateChat = await PrivateChat.findOne({
-              where: { user1_id, user2_id }
-          });
+      const existingPrivateChat = await PrivateChat.findOne({
+        where: { user1_id, user2_id },
+        transaction,
+      });
 
-          if (existingPrivateChat) {
-              // 已有私聊房间，直接返回
-              return res.status(200).json({
-                  message: '私聊房间已存在',
-                  chatRoomId: existingPrivateChat.room_id,
-                  users: [user1_id, user2_id]
-              });
-          }
-
-          // 2创建聊天室
-          const chatRoom = await ChatRoom.create({
-              type: 'private',
-              name: `私聊_${user1_id}_和_${user2_id}`,
-              created_at: new Date()
-          });
-
-          const roomId = chatRoom.room_id;
-
-          // 添加两个用户到聊天室成员表
-          await ChatRoomMember.bulkCreate([
-              {
-                  room_id: roomId,
-                  user_id: user1_id,
-                  role: 'member'
-              },
-              {
-                  room_id: roomId,
-                  user_id: user2_id,
-                  role: 'member'
-              }
-          ]);
-
-          // 插入私聊映射表
-          await PrivateChat.create({
-              user1_id,
-              user2_id,
-              room_id: roomId
-          });
-
-          return res.status(201).json({
-              message: '私聊聊天室已创建',
-              chatRoomId: roomId,
-              users: [user1_id, user2_id]
-          });
-
-      } catch (error) {
-          logger.error('创建私聊失败:', error);
-          return res.status(500).json({ message: '服务器内部错误' });
+      if (existingPrivateChat) {
+        await transaction.commit();
+        return res.status(200).json({
+          message: '私聊房间已存在',
+          chatRoomId: existingPrivateChat.room_id,
+          users: [user1_id, user2_id],
+        });
       }
+
+      // 3. 创建聊天室
+      const chatRoom = await ChatRoom.create(
+        {
+          type: 'private',
+          name: `私聊_${user1_id}_和_${user2_id}`,
+          created_at: new Date(),
+        },
+        { transaction }
+      );
+
+      const roomId = chatRoom.room_id;
+
+      // 4. 添加两个用户到聊天室成员表
+      await ChatRoomMember.bulkCreate(
+        [
+          {
+            room_id: roomId,
+            user_id: user1_id,
+            role: 'member',
+            joined_at: new Date(),
+          },
+          {
+            room_id: roomId,
+            user_id: user2_id,
+            role: 'member',
+            joined_at: new Date(),
+          },
+        ],
+        { transaction, ignoreDuplicates: true }
+      );
+
+      // 5. 插入私聊映射表
+      await PrivateChat.create(
+        {
+          user1_id,
+          user2_id,
+          room_id: roomId,
+        },
+        { transaction }
+      );
+
+      // 6. 提交事务
+      await transaction.commit();
+
+      return res.status(201).json({
+        message: '私聊聊天室已创建',
+        chatRoomId: roomId,
+        users: [user1_id, user2_id],
+      });
+    } catch (error) {
+      // 7. 回滚事务
+      await transaction.rollback();
+      logger.error('创建私聊失败:', error);
+      return res.status(500).json({ message: '服务器内部错误' });
+    }
   },
   getTeamChatRoom: async (req, res) => {
       const { team_id } = req.params;
@@ -933,6 +953,101 @@ respondToInvitation: async (req, res) => {
       logger.error('获取邀请列表失败:', error);
       console.error(error.stack);
       return res.status(500).json({ message: '服务器内部错误' });
+    }
+  },
+  /**
+   * @route POST /api/teams/:team_id/members/:user_id
+   * @desc 队长或管理员直接将用户拉入子团队聊天室（无需邀请，不改变用户所属主团队）
+   * @access Private (仅限 owner 或 co_owner)
+   */
+  inviteUserToSubTeamDirect: async (req, res) => {
+    const transaction = await sequelize.transaction();
+    try {
+      const currentUserId = req.user.userId;
+      const { team_id: subTeamId } = req.params;
+      const targetUserId = parseInt(req.params.user_id, 10);
+
+      // 1. 验证目标用户存在
+      const targetUser = await User.findByPk(targetUserId, { transaction });
+      if (!targetUser) {
+        await transaction.rollback();
+        return res.status(404).json({ message: '目标用户不存在' });
+      }
+
+      // 2. 获取子团队信息
+      const subTeam = await Team.findByPk(subTeamId, { transaction });
+      if (!subTeam) {
+        await transaction.rollback();
+        return res.status(404).json({ message: '子团队不存在' });
+      }
+
+      // 3. 获取子团队的聊天室
+      const chatRoom = await ChatRoom.findOne({
+        where: { team_id: subTeamId },
+        transaction
+      });
+      if (!chatRoom) {
+        await transaction.rollback();
+        return res.status(404).json({ message: '子团队聊天室不存在' });
+      }
+
+      // 4. 检查当前用户是否是该子团队的 owner 或 co_owner
+      const currentMember = await ChatRoomMember.findOne({
+        where: {
+          room_id: chatRoom.room_id,
+          user_id: currentUserId,
+          role: { [Op.in]: ['owner', 'co_owner'] }
+        },
+        transaction
+      });
+
+      if (!currentMember) {
+        await transaction.rollback();
+        return res.status(403).json({
+          message: '仅团队负责人或管理员可执行此操作'
+        });
+      }
+
+      // 5. 检查目标用户是否已是该子团队聊天室成员
+      const existingMember = await ChatRoomMember.findOne({
+        where: {
+          room_id: chatRoom.room_id,
+          user_id: targetUserId
+        },
+        transaction
+      });
+
+      if (existingMember) {
+        await transaction.rollback();
+        return res.status(409).json({ message: '用户已是该子团队成员' });
+      }
+
+      // 6. 直接将用户加入子团队聊天室
+      await ChatRoomMember.create({
+        room_id: chatRoom.room_id,
+        user_id: targetUserId,
+        role: 'member',
+        joined_at: new Date()
+      }, { transaction });
+
+      await transaction.commit();
+
+      return res.json({
+        message: '用户已成功加入子团队聊天室',
+        data: {
+          room_id: chatRoom.room_id,
+          team_id: subTeamId,
+          added_user_id: targetUserId
+        }
+      });
+
+    } catch (error) {
+      await transaction.rollback();
+      console.error('直接邀请用户加入子团队失败:', error);
+      return res.status(500).json({
+        message: '服务器内部错误',
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
     }
   }
 };

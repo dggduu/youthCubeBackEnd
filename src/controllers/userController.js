@@ -44,37 +44,41 @@ export const userController = {
       const { id } = req.params;
       const user = await User.findByPk(id, {
         attributes: { exclude: ['password'] },
-        include: [{
-          model: Posts,
-          as: 'posts',
-          attributes: ['post_id', 'title', 'cover_image_url'],
-          separate: true,
-          order: [['created_at', 'DESC']]
-        }]
+        include: [
+          {
+            model: Posts,
+            as: 'posts',
+            attributes: ['post_id', 'title', 'cover_image_url'],
+            separate: true,
+            order: [['created_at', 'DESC']],
+          },
+        ],
       });
 
       if (!user) {
         return res.status(404).json({ message: 'User not found.' });
       }
 
+      const userData = user.toJSON();
+
       if (user.team_id) {
         const team = await Team.findOne({
-          where: { 
+          where: {
             team_id: user.team_id,
-            is_public: 1 
+            is_public: 1,
           },
           attributes: ['team_id', 'team_name', 'description'],
-          raw: true
+          raw: true,
         });
-        
+
         if (team) {
-          user.team = team;
+          userData.team = team;
         } else {
-          user.team_id = null;
+          userData.team_id = null;
         }
       }
 
-      return res.status(200).json(user);
+      return res.status(200).json(userData);
     } catch (error) {
       console.error('Get user by ID error:', error);
       return res.status(500).json({ message: 'Server error.', error: error.message });

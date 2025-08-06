@@ -17,7 +17,7 @@ export default (sequelize) => {
       allowNull: false,
     },
     media_type: {
-      type: DataTypes.ENUM('image', 'video'),
+      type: DataTypes.STRING(100),
       allowNull: false,
     },
     order_index: {
@@ -37,7 +37,6 @@ export default (sequelize) => {
   });
 
   PostMedia.associate = function(models) {
-    // Corrected: Use models.Posts (uppercase P)
     PostMedia.belongsTo(models.Posts, {
       foreignKey: "post_id",
       as: "post",

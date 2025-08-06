@@ -1,3 +1,4 @@
+// models/Team.js
 import { DataTypes } from "sequelize";
 
 export default (sequelize) => {
@@ -23,7 +24,7 @@ export default (sequelize) => {
     create_at: {
       type: DataTypes.DATE,
       allowNull: false,
-      defaultValue: sequelize.literal("CURRENT_TIMESTAMP"),
+      defaultValue: DataTypes.NOW, 
       field: "create_at"
     },
     grade: {
@@ -43,6 +44,15 @@ export default (sequelize) => {
         ]
       }
     },
+    parent_team_id: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      references: {
+        model: 'teams',
+        key: 'team_id'
+      },
+      field: 'parent_team_id'
+    },
     is_public: {
       type: DataTypes.BOOLEAN,
       allowNull: false,
@@ -51,20 +61,44 @@ export default (sequelize) => {
   }, {
     timestamps: false,
     tableName: 'teams',
+    underscored: false,
   });
+
   Team.associate = function(models) {
-    Team.hasMany(models.ChatRoomMember, {
-      foreignKey: 'room_id',
-      as: 'members'
+    // 团队 → 公告
+    if (models.TeamAnnouncement) {
+      Team.hasMany(models.TeamAnnouncement, {
+        foreignKey: 'team_id',
+        as: 'announcements'
+      });
+    }
+
+    // 团队 → 聊天室
+    if (models.ChatRoom) {
+      Team.hasOne(models.ChatRoom, {
+        foreignKey: 'team_id',
+        as: 'chatRoom'
+      });
+    }
+
+    // 团队 → 项目成果
+    if (models.ProjectResult) {
+      Team.hasMany(models.ProjectResult, {
+        foreignKey: 'team_id',
+        as: 'projectResults'
+      });
+    }
+
+    // 自关联：团队 → 子团队
+    Team.hasMany(models.Team, {
+      foreignKey: 'parent_team_id',
+      as: 'subTeams'
     });
 
-    Team.hasOne(models.ChatRoom, {
-      foreignKey: 'team_id',
-      as: 'chatRoom'
-    });
-    Team.hasMany(models.ProjectResult, {
-      foreignKey: 'team_id',
-      as: 'projectResults'
+    // 团队 ← 父团队
+    Team.belongsTo(models.Team, {
+      foreignKey: 'parent_team_id',
+      as: 'parentTeam'
     });
   };
 

@@ -324,112 +324,148 @@ export const invitationController = {
    * @desc 接受好友邀请，添加双向关注
    * @access Private
    */
-acceptFriendInvitation: async (req, res) => {
-  const transaction = await FriendInvitation.sequelize.transaction();
+  acceptFriendInvitation: async (req, res) => {
+    const transaction = await FriendInvitation.sequelize.transaction();
 
-  try {
-    const currentUserId = req.user.userId;
-    const invitationId = req.params.id;
+    try {
+      const currentUserId = req.user.userId;
+      const invitationId = req.params.id;
 
-    const invitation = await FriendInvitation.findByPk(invitationId, { transaction });
+      const invitation = await FriendInvitation.findByPk(invitationId, { transaction });
 
-    if (!invitation || invitation.invitee_id !== currentUserId) {
-      await transaction.rollback();
-      return res.status(404).json({ message: 'Invitation not found.' });
-    }
+      if (!invitation || invitation.invitee_id !== currentUserId) {
+        await transaction.rollback();
+        return res.status(404).json({ message: '邀请不存在或无权限操作' });
+      }
 
-    if (invitation.expires_at < new Date()) {
-      invitation.status = 'expired';
+      if (invitation.expires_at < new Date()) {
+        invitation.status = 'expired';
+        await invitation.save({ transaction });
+        await transaction.rollback();
+        return res.status(400).json({ message: '邀请已过期' });
+      }
+
+      if (invitation.status !== 'pending') {
+        await transaction.rollback();
+        return res.status(400).json({ message: '邀请状态异常' });
+      }
+
+      if (currentUserId === invitation.inviter_id) {
+        await transaction.rollback();
+        return res.status(400).json({ message: '不能与自己互粉' });
+      }
+
+      const existingFollow1 = await UserFollows.findOne({
+        where: {
+          follower_id: currentUserId,
+          following_id: invitation.inviter_id
+        },
+        transaction
+      });
+
+      const existingFollow2 = await UserFollows.findOne({
+        where: {
+          follower_id: invitation.inviter_id,
+          following_id: currentUserId
+        },
+        transaction
+      });
+
+      if (!existingFollow1) {
+        await UserFollows.create({
+          follower_id: currentUserId,
+          following_id: invitation.inviter_id
+        }, { transaction });
+      }
+
+      if (!existingFollow2) {
+        await UserFollows.create({
+          follower_id: invitation.inviter_id,
+          following_id: currentUserId
+        }, { transaction });
+      }
+
+      const [user1_id, user2_id] = [currentUserId, invitation.inviter_id].sort((a, b) => a - b);
+      
+      let roomId;
+
+      const existingPrivateChat = await PrivateChat.findOne({
+        where: { user1_id, user2_id },
+        transaction
+      });
+      // 复用
+      if (existingPrivateChat) {
+        roomId = existingPrivateChat.room_id;
+        const memberExists = await ChatRoomMember.findOne({
+          where: {
+            room_id: roomId,
+            user_id: currentUserId
+          },
+          transaction
+        });
+
+        if (!memberExists) {
+          await ChatRoomMember.create({
+            room_id: roomId,
+            user_id: currentUserId,
+            role: 'member',
+            joined_at: new Date()
+          }, { transaction });
+        }
+      } else {
+        const chatRoom = await ChatRoom.create(
+          {
+            type: 'private',
+            name: `私聊_${user1_id}_和_${user2_id}`,
+            created_at: new Date()
+          },
+          { transaction }
+        );
+
+        roomId = chatRoom.room_id;
+
+        // 创建 PrivateChat 映射
+        await PrivateChat.create({
+          user1_id,
+          user2_id,
+          room_id: roomId
+        }, { transaction });
+
+        // 添加双方为成员
+        await ChatRoomMember.bulkCreate([
+          {
+            room_id: roomId,
+            user_id: user1_id,
+            role: 'member',
+            joined_at: new Date(),
+          },
+          {
+            room_id: roomId,
+            user_id: user2_id,
+            role: 'member',
+            joined_at: new Date(),
+          },
+        ], { transaction });
+      }
+
+      // 更新邀请状态
+      invitation.status = 'accepted';
       await invitation.save({ transaction });
+
+      await transaction.commit();
+
+      return res.json({
+        message: '好友邀请已接受',
+        status: 'accepted',
+        chat_room_id: roomId,
+      });
+
+    } catch (error) {
       await transaction.rollback();
-      return res.status(400).json({ message: 'Invitation has expired.' });
+      logger.error('接受好友邀请失败:', error);
+      return res.status(500).json({ message: '服务器内部错误' });
     }
-
-    if (invitation.status !== 'pending') {
-      await transaction.rollback();
-      return res.status(400).json({ message: 'Invitation is not pending.' });
-    }
-
-    if (currentUserId === invitation.inviter_id) {
-      await transaction.rollback();
-      return res.status(400).json({ message: '不能与自己互粉' });
-    }
-
-    // 创建互相关注
-    await UserFollows.findOrCreate({
-      where: {
-        follower_id: currentUserId,
-        following_id: invitation.inviter_id
-      },
-      transaction
-    });
-
-    await UserFollows.findOrCreate({
-      where: {
-        follower_id: invitation.inviter_id,
-        following_id: currentUserId
-      },
-      transaction
-    });
-
-    // 创建私聊房间（ChatRoom）
-    const chatRoom = await ChatRoom.create(
-      {
-        type: 'private',
-        name: null,
-        team_id: null,
-      },
-      { transaction }
-    );
-
-    const roomId = chatRoom.room_id;
-
-    // ✅ 插入 PrivateChat 表，记录两个用户和房间的映射
-    const [user1_id, user2_id] = currentUserId < invitation.inviter_id
-      ? [currentUserId, invitation.inviter_id]
-      : [invitation.inviter_id, currentUserId];
-
-    await PrivateChat.create({
-      user1_id,
-      user2_id,
-      room_id: roomId
-    }, { transaction });
-
-    // ✅ 仍然插入 ChatRoomMember（否则无法发消息）
-    await ChatRoomMember.bulkCreate(
-      [
-        {
-          room_id: roomId,
-          user_id: invitation.inviter_id,
-          role: 'member',
-          joined_at: new Date(),
-        },
-        {
-          room_id: roomId,
-          user_id: currentUserId,
-          role: 'member',
-          joined_at: new Date(),
-        },
-      ],
-      { transaction }
-    );
-
-    // 更新邀请状态
-    invitation.status = 'accepted';
-    await invitation.save({ transaction });
-
-    await transaction.commit();
-
-    return res.json({
-      ...invitation.toJSON(),
-      chat_room_id: roomId,
-    });
-  } catch (error) {
-    await transaction.rollback();
-    console.error('Error accepting friend invitation:', error);
-    return res.status(500).json({ message: 'Internal server error.' });
-  }
-},
+  },
 
   /**
    * @route PATCH /api/invitations/team/:id/reject

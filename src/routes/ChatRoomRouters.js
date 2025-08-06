@@ -23,4 +23,7 @@ router.post('/api/chatrooms/:room_id/invitations', authenticateToken, chatRoomCo
 router.put('/api/chatrooms/:room_id/invitations/:invitation_id/respond', authenticateToken, chatRoomController.respondToInvitation);
 router.put('/api/teams/:team_id', authenticateToken, chatRoomController.updateTeamInfo);
 router.get('/api/chatrooms/:room_id/invitations', authenticateToken, chatRoomController.listChatRoomInvitations);
+
+// 添加用户进入子群
+router.post('/api/teams/:team_id/members/:user_id/invite-direct', authenticateToken, chatRoomController.inviteUserToSubTeamDirect);
 export default router;
