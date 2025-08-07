@@ -15,7 +15,7 @@ export const teamController = {
     const user_id = req.user.userId;
 
     try {
-      const { team_name, description, tagIds, is_public, grade } = req.body;
+      const { team_name, description, tagIds, is_public, grade, img_url } = req.body;
       if (!team_name) {
         return res.status(400).json({ message: '需要队伍名称' });
       }
@@ -56,6 +56,7 @@ export const teamController = {
         description,
         is_public: Number(is_public),
         grade,
+        img_url
       }, { transaction });
 
       // 更新用户的 team_id
@@ -276,13 +277,14 @@ export const teamController = {
   updateTeam: async (req, res) => {
     try {
       const { id } = req.params;
-      const { team_name, description, is_public, grade } = req.body;
+      const { team_name, description, is_public, grade, img_url } = req.body;
 
       const updateFields = {};
       if (team_name !== undefined) updateFields.team_name = team_name;
       if (description !== undefined) updateFields.description = description;
       if (is_public !== undefined) updateFields.is_public = is_public;
       if (grade !== undefined) updateFields.grade = grade;
+      if (img_url !== undefined) updateFields.img_url = img_url;
 
       if (Object.keys(updateFields).length === 0) {
         return res.status(400).json({ message: 'No fields to update.' });

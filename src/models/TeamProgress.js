@@ -53,6 +53,11 @@ export default (sequelize) => {
       foreignKey: 'team_id',
       as: 'team',
     });
+  TeamProgress.hasOne(models.ProgressMedia, {
+    foreignKey: 'progress_id',
+    as: 'media',
+    onDelete: 'CASCADE'
+  });
   };
 
   return TeamProgress;

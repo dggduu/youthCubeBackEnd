@@ -27,6 +27,8 @@ import TeamProgressModel from "../models/TeamProgress.js";
 import ProgressCommentModel from "../models/ProgressComment.js";
 import ThoughtBulletModel from "../models/ThoughtBullet.js";
 import TeamAnnouncementModel from "../models/TeamAnnouncement.js";
+import ProgressMediaModel from "../models/ProgressMedia.js";
+
 // 加载环境变量
 dotenv.config();
 
@@ -66,6 +68,7 @@ const ProgressComment = ProgressCommentModel(sequelize, Sequelize);
 const TeamProgress = TeamProgressModel(sequelize, Sequelize);
 const ThoughtBullet = ThoughtBulletModel(sequelize,Sequelize);
 const TeamAnnouncement = TeamAnnouncementModel(sequelize,Sequelize);
+const ProgressMedia = ProgressMediaModel(sequelize, Sequelize);
 
 // 建立模型关联
 User.hasMany(RefreshToken, { foreignKey: 'user_id', as: 'refreshTokens' });
@@ -138,7 +141,8 @@ const db = {
   TeamProgress,
   ProgressComment,
   ThoughtBullet,
-  TeamAnnouncement
+  TeamAnnouncement,
+  ProgressMedia
 };
 
 Object.keys(db).forEach(modelName => {
@@ -184,5 +188,6 @@ export {
   ProgressComment,
   connectDB,
   ThoughtBullet,
-  TeamAnnouncement
+  TeamAnnouncement,
+  ProgressMedia
 };

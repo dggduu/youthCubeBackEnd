@@ -21,6 +21,10 @@ export default (sequelize) => {
       type: DataTypes.TEXT,
       allowNull: true,
     },
+    img_url: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
     create_at: {
       type: DataTypes.DATE,
       allowNull: false,

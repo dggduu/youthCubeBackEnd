@@ -1,5 +1,5 @@
 import { TeamProgress } from '../config/Sequelize.js';
-import { ProgressComment} from '../config/Sequelize.js';
+import { ProgressComment, ProgressMedia} from '../config/Sequelize.js';
 import { User } from '../config/Sequelize.js';
 import { Op } from 'sequelize';
 import { getPagination, getPagingData } from '../utils/pagination.js';
@@ -10,18 +10,14 @@ import {
   } from "../utils/ProgressUtil.js";
 import { Sequelize } from 'sequelize';
 import { getFilter } from "../utils/sensitiveWordFilter.js";
+
 export const progressController = {
-  /**
-   * @route POST /api/team/:teamId/progress
-   * @desc 创建一条团队进度条目
-   * @access Private (仅团队成员)
-   */
   createTeamProgress: async (req, res) => {
     try {
       const { teamId } = req.params;
-      const { description, status = 'pending', timeline_type, title, event_time } = req.body;
+      const { description, status = 'pending', timeline_type, title, event_time, media_url, media_type } = req.body;
       const submit_user_id = req.user.userId;
-      // 校验必填字段
+
       if (!description) {
         return res.status(400).json({ message: '描述内容不能为空。' });
       }
@@ -46,29 +42,52 @@ export const progressController = {
         return res.status(422).json({message : "内容含有敏感词"});
       }
 
-      const newProgress = await TeamProgress.create({
-        team_id: teamId,
-        submit_user_id,
-        description,
-        content: description,
-        status,
-        timeline_type,
-        title,
-        event_time,
-      });
+      const transaction = await TeamProgress.sequelize.transaction();
+      
+      try {
+        const newProgress = await TeamProgress.create({
+          team_id: teamId,
+          submit_user_id,
+          description,
+          content: description,
+          status,
+          timeline_type,
+          title,
+          event_time,
+        }, { transaction });
 
-      res.status(201).json({ message: '进度创建成功', progress: newProgress });
+        if (media_url) {
+          await ProgressMedia.create({
+            progress_id: newProgress.progress_id,
+            media_url,
+            media_type: media_type || 'image',
+            order_index: 0
+          }, { transaction });
+        }
+
+        await transaction.commit();
+        
+        const createdProgress = await TeamProgress.findByPk(newProgress.progress_id, {
+          include: [
+            { model: User, as: 'submitter', attributes: ['id', 'name', 'avatar_key'] },
+            { model: ProgressMedia, as: 'media' }
+          ]
+        });
+
+        res.status(201).json({ 
+          message: '进度创建成功', 
+          progress: createdProgress 
+        });
+      } catch (error) {
+        await transaction.rollback();
+        throw error;
+      }
     } catch (error) {
       console.error('创建进度失败:', error);
       res.status(500).json({ message: '服务器错误。', error: error.message });
     }
   },
 
-  /**
-   * @route GET /api/team/:teamId/progress
-   * @desc 获取某个团队的所有进度条目（分页）
-   * @access Private
-   */
   getTeamProgressList: async (req, res) => {
     try {
       const { teamId } = req.params;
@@ -77,11 +96,18 @@ export const progressController = {
 
       const data = await TeamProgress.findAndCountAll({
         where: { team_id: teamId },
-        include: [{
-          model: User,
-          as: 'submitter',
-          attributes: ['id', 'name', 'avatar_key']
-        }],
+        include: [
+          {
+            model: User,
+            as: 'submitter',
+            attributes: ['id', 'name', 'avatar_key']
+          },
+          {
+            model: ProgressMedia,
+            as: 'media',
+            attributes: ['media_id', 'media_url', 'media_type']
+          }
+        ],
         order: [['created_at', 'DESC']],
         limit,
         offset
@@ -95,54 +121,27 @@ export const progressController = {
     }
   },
 
-  getTeamProgressByYear: async (req, res) => {
-    try {
-      const { teamId, year } = req.params;
-      const { page, size } = req.query;
-
-      // 获取当前时间
-      const today = new Date();
-      const oneYearAgo = new Date(today);
-      oneYearAgo.setFullYear(today.getFullYear() - 1);
-
-      // 设置时间为当天的 00:00:00
-      oneYearAgo.setHours(0, 0, 0, 0);
-      today.setHours(23, 59, 59, 999);
-
-      const progressList = await TeamProgress.findAll({
-        where: {
-          team_id: teamId,
-          event_time: {
-            [Op.between]: [oneYearAgo, today]
-          }
-        },
-        attributes: ['event_time', 'timeline_type'],
-        order: [['event_time', 'ASC']]
-      });
-
-      res.status(200).json({
-        success: true,
-        data: progressList
-      });
-    } catch (error) {
-      console.error('按年份获取团队进度失败:', error);
-      res.status(500).json({ 
-        success: false,
-        message: '按年份获取团队进度失败',
-        error: error.message 
-      });
-    }
-  },
-
-  /**
-   * @route GET /api/progress/:progressId
-   * @desc 获取单条进度详情 + 提交人信息
-   * @access Public
-   */
   getProgressById: async (req, res) => {
     try {
-      const progress = await getProgressOr404(req.params.progressId, res);
-      if (!progress) return;
+      const progress = await TeamProgress.findByPk(req.params.progressId, {
+        include: [
+          { 
+            model: User, 
+            as: 'submitter', 
+            attributes: ['id', 'name', 'avatar_key'] 
+          },
+          { 
+            model: ProgressMedia, 
+            as: 'media',
+            attributes: ['media_id', 'media_url', 'media_type']
+          }
+        ]
+      });
+      
+      if (!progress) {
+        return res.status(404).json({ message: '进度未找到' });
+      }
+      
       res.status(200).json({ progress });
     } catch (error) {
       console.error('获取进度失败:', error);
@@ -150,45 +149,76 @@ export const progressController = {
     }
   },
 
-  /**
-   * @route PUT /api/progress/:id
-   * @desc 修改一条进度条目
-   * @access Private (仅创建者或管理员)
-   */
   updateProgress: async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { title, content, timeline_type, event_time, media_url, media_type } = req.body;
+      const user_id = req.user.userId;
+
+      const progress = await getProgressOr404(id, res);
+      if (!progress) return;
+
+      if (!checkPermission(res, progress.submit_user_id, user_id)) return;
+
+      const transaction = await sequelize.transaction();
+      
       try {
-        const { id } = req.params;
-        const { title, content, timeline_type, event_time } = req.body;
-        const user_id = req.user.userId;
-
-        const progress = await getProgressOr404(id, res);
-        if (!progress) return;
-
-        if (!checkPermission(res, progress.submit_user_id, user_id)) return;
-        
         await progress.update({
           title,
           content,
           timeline_type,
           event_time,
-        });
+        }, { transaction });
+
+        if (media_url) {
+          const existingMedia = await ProgressMedia.findOne({ 
+            where: { progress_id: id },
+            transaction 
+          });
+
+          if (existingMedia) {
+            await existingMedia.update({
+              media_url,
+              media_type: media_type || existingMedia.media_type
+            }, { transaction });
+          } else {
+            await ProgressMedia.create({
+              progress_id: id,
+              media_url,
+              media_type: media_type || 'image',
+              order_index: 0
+            }, { transaction });
+          }
+        } else {
+          await ProgressMedia.destroy({ 
+            where: { progress_id: id },
+            transaction 
+          });
+        }
+
+        await transaction.commit();
 
         const updatedProgress = await TeamProgress.findByPk(id, {
-          include: [{ model: User, as: 'submitter', attributes: ['id', 'name', 'avatar_key'] }]
+          include: [
+            { model: User, as: 'submitter', attributes: ['id', 'name', 'avatar_key'] },
+            { model: ProgressMedia, as: 'media' }
+          ]
         });
 
-        res.status(200).json({ message: '进度更新成功', progress: updatedProgress });
+        res.status(200).json({ 
+          message: '进度更新成功', 
+          progress: updatedProgress 
+        });
       } catch (error) {
-        console.error('更新进度失败:', error);
-        res.status(500).json({ message: '服务器错误。', error: error.message });
+        await transaction.rollback();
+        throw error;
       }
+    } catch (error) {
+      console.error('更新进度失败:', error);
+      res.status(500).json({ message: '服务器错误。', error: error.message });
+    }
   },
 
-  /**
-   * @route DELETE /api/progress/:id
-   * @desc 删除一条进度条目
-   * @access Private (仅创建者或管理员)
-   */
   deleteProgress: async (req, res) => {
     try {
       const { id } = req.params;
@@ -199,19 +229,28 @@ export const progressController = {
 
       if (!checkPermission(res, progress.submit_user_id, user_id)) return;
 
-      await progress.destroy();
-      res.status(204).send();
+      const transaction = await sequelize.transaction();
+      
+      try {
+        await ProgressMedia.destroy({ 
+          where: { progress_id: id },
+          transaction 
+        });
+        
+        await progress.destroy({ transaction });
+        
+        await transaction.commit();
+        res.status(204).send();
+      } catch (error) {
+        await transaction.rollback();
+        throw error;
+      }
     } catch (error) {
       console.error('删除进度失败:', error);
       res.status(500).json({ message: '服务器错误。', error: error.message });
     }
   },
-  
-  /**
-   * @route POST /api/progress/:progressId/comments
-   * @desc 给进度添加评论
-   * @access Private
-   */
+
   addCommentToProgress: async (req, res) => {
     try {
       const { progressId } = req.params;
@@ -314,13 +353,44 @@ export const progressController = {
       });
     }
   },
+ getTeamProgressByYear: async (req, res) => {
+    try {
+      const { teamId, year } = req.params;
+      const { page, size } = req.query;
 
+      // 获取当前时间
+      const today = new Date();
+      const oneYearAgo = new Date(today);
+      oneYearAgo.setFullYear(today.getFullYear() - 1);
 
-  /**
-   * @route GET /api/progress/comments/:commentId/replies
-   * @desc 获取某条评论的子评论（回复）
-   * @access Public
-   */
+      // 设置时间为当天的 00:00:00
+      oneYearAgo.setHours(0, 0, 0, 0);
+      today.setHours(23, 59, 59, 999);
+
+      const progressList = await TeamProgress.findAll({
+        where: {
+          team_id: teamId,
+          event_time: {
+            [Op.between]: [oneYearAgo, today]
+          }
+        },
+        attributes: ['event_time', 'timeline_type'],
+        order: [['event_time', 'ASC']]
+      });
+
+      res.status(200).json({
+        success: true,
+        data: progressList
+      });
+    } catch (error) {
+      console.error('按年份获取团队进度失败:', error);
+      res.status(500).json({ 
+        success: false,
+        message: '按年份获取团队进度失败',
+        error: error.message 
+      });
+    }
+  },
   getRepliesForProgressComment: async (req, res) => {
     try {
       const { commentId } = req.params;

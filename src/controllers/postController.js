@@ -20,12 +20,13 @@ export const postController = {
    */
   createPost: async (req, res) => {
     try {
-      const { title, content, cover_image_url,tagIds } = req.body;
+      const { title, content, cover_image_url, tagIds, attachments } = req.body;
       const user_id = req.user.userId;
-      console.log(user_id,title,content,tagIds);
+      
       if (!title || !content || !user_id) {
         return res.status(400).json({ message: 'Title, content, and user ID are required.' });
       }
+      
       const filter = getFilter();
       const result = filter.filter(title, { replace: false });
       if (result.words.length > 0) {
@@ -50,10 +51,32 @@ export const postController = {
         await PostTags.bulkCreate(postTagRecords);
       }
 
+      // Handle attachments
+      if (attachments && attachments.length > 0) {
+        const attachmentRecords = attachments.map(attachment => ({
+          post_id: newPost.post_id,
+          media_url: attachment.url,
+          media_type: attachment.type || 'application/octet-stream',
+          order_index: attachment.order || 0,
+        }));
+        await PostMedia.bulkCreate(attachmentRecords);
+      }
+
       const populatedPost = await Posts.findByPk(newPost.post_id, {
         include: [
           { model: User, as: 'author', attributes: ['id', 'name', 'avatar_key'] },
-          { model: tags, as: 'tags', attributes: ['tag_id', 'tag_name'], through: { attributes: [] } }
+          { model: tags, as: 'tags', attributes: ['tag_id', 'tag_name'], through: { attributes: [] } },
+          { 
+            model: PostMedia, 
+            as: 'media', 
+            attributes: ['media_id', 'media_url', 'media_type', 'order_index'],
+            where: {
+              media_type: {
+                [Op.notIn]: ['image/jpeg', 'image/png', 'image/gif'] // 排除图片类型
+              }
+            },
+            required: false
+          }
         ]
       });
 
@@ -66,7 +89,7 @@ export const postController = {
   createTeamReport: async (req, res) => {
     const transaction = await Posts.sequelize.transaction();
     try {
-      const { title, content, cover_image_url, tagIds, type } = req.body;
+      const { title, content, cover_image_url, tagIds, type, attachments } = req.body;
       const user_id = req.user.userId;
       const team_id = req.params.teamId;
 
@@ -84,6 +107,7 @@ export const postController = {
           message: '报告类型必须是 article 或 manual'
         });
       }
+      
       const filter = getFilter();
       const result = filter.filter(title, { replace: false });
       if (result.words.length > 0) {
@@ -109,7 +133,18 @@ export const postController = {
         await PostTags.bulkCreate(postTagRecords, { transaction });
       }
 
-      // 3. 创建项目成果（团队报告）
+      // 3. 处理附件
+      if (attachments && attachments.length > 0) {
+        const attachmentRecords = attachments.map(attachment => ({
+          post_id: newPost.post_id,
+          media_url: attachment.url,
+          media_type: attachment.type,
+          order_index: attachment.order || 0,
+        }));
+        await PostMedia.bulkCreate(attachmentRecords, { transaction });
+      }
+
+      // 4. 创建项目成果（团队报告）
       const newReport = await ProjectResult.create({
         team_id,
         type,
@@ -218,6 +253,17 @@ export const postController = {
             include: [{ model: User, as: 'user', attributes: ['id', 'name', 'avatar_key'] }],
             order: [['created_at', 'ASC']],
             limit: 5
+          },
+          {
+            model: PostMedia,
+            as: 'media',
+            attributes: ['media_id', 'media_url', 'media_type', 'order_index'],
+            where: {
+              media_type: {
+                [Op.notIn]: ['image/jpeg', 'image/png', 'image/gif']
+              }
+            },
+            required: false
           }
         ]
       });
@@ -243,7 +289,7 @@ export const postController = {
   updatePost: async (req, res) => {
     try {
       const { id } = req.params;
-      const { title, content, cover_image_url, location, media, tagIds } = req.body;
+      const { title, content, cover_image_url, location, media, tagIds, attachments } = req.body;
       const user_id = req.user.id;
 
       const post = await Posts.findByPk(id);
@@ -261,7 +307,14 @@ export const postController = {
       );
 
       if (media) {
-        await PostMedia.destroy({ where: { post_id: id } });
+        await PostMedia.destroy({ 
+          where: { 
+            post_id: id,
+            media_type: {
+              [Op.in]: ['image/jpeg', 'image/png', 'image/gif'] // 只删除图片类型的媒体
+            }
+          } 
+        });
         const mediaRecords = media.map(m => ({
           post_id: id,
           media_url: m.url,
@@ -269,6 +322,25 @@ export const postController = {
           order_index: m.order,
         }));
         await PostMedia.bulkCreate(mediaRecords);
+      }
+
+      // Handle attachments update
+      if (attachments) {
+        await PostMedia.destroy({ 
+          where: { 
+            post_id: id,
+            media_type: {
+              [Op.notIn]: ['image/jpeg', 'image/png', 'image/gif'] // 删除非图片类型的媒体
+            }
+          } 
+        });
+        const attachmentRecords = attachments.map(attachment => ({
+          post_id: id,
+          media_url: attachment.url,
+          media_type: attachment.type,
+          order_index: attachment.order || 0,
+        }));
+        await PostMedia.bulkCreate(attachmentRecords);
       }
 
       if (tagIds) {
@@ -284,7 +356,11 @@ export const postController = {
         const updatedPost = await Posts.findByPk(id, {
           include: [
             { model: User, as: 'author', attributes: ['id', 'name', 'avatar_key'] },
-            { model: PostMedia, as: 'media', attributes: ['media_url', 'media_type', 'order_index'] },
+            { 
+              model: PostMedia, 
+              as: 'media', 
+              attributes: ['media_id', 'media_url', 'media_type', 'order_index'] 
+            },
             { model: tags, as: 'tags', attributes: ['tag_id', 'tag_name'], through: { attributes: [] } }
           ]
         });

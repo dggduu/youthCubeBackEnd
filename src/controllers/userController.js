@@ -59,7 +59,19 @@ export const userController = {
         return res.status(404).json({ message: 'User not found.' });
       }
 
+      // Get follower count (people who follow this user)
+      const followerCount = await UserFollows.count({
+        where: { following_id: id },
+      });
+
+      // Get following count (people this user follows)
+      const followingCount = await UserFollows.count({
+        where: { follower_id: id },
+      });
+
       const userData = user.toJSON();
+      userData.followerCount = followerCount;
+      userData.followingCount = followingCount;
 
       if (user.team_id) {
         const team = await Team.findOne({

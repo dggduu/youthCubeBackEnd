@@ -75,8 +75,13 @@ class MinioService {
                 await minioClient.removeObject(bucket, part.tempObjectName);
                 logger.debug(`临时文件 ${part.tempObjectName} 已删除`);
             }
-
-            return { message: 'Upload successfully', objectName };
+            const fileUrl = `${process.env.MINIO_USE_SSL === 'true' ? 'https' : 'http'}://${process.env.MINIO_ENDPOINT}:${process.env.MINIO_PORT}/${bucket}/${objectName}`;
+            return {
+                message: 'Upload completed',
+                objectName: objectName,
+                bucketName: bucket,
+                fileUrl
+                };
         } catch (error) {
             logger.error(`合并 ${objectName} 分片到桶 ${bucket} 时遇到问题:`, error);
             throw error;
