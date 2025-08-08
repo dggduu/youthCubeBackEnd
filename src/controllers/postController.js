@@ -311,7 +311,7 @@ export const postController = {
           where: { 
             post_id: id,
             media_type: {
-              [Op.in]: ['image/jpeg', 'image/png', 'image/gif'] // 只删除图片类型的媒体
+              [Op.in]: ['image/jpeg', 'image/png', 'image/gif']
             }
           } 
         });
@@ -324,13 +324,12 @@ export const postController = {
         await PostMedia.bulkCreate(mediaRecords);
       }
 
-      // Handle attachments update
       if (attachments) {
         await PostMedia.destroy({ 
           where: { 
             post_id: id,
             media_type: {
-              [Op.notIn]: ['image/jpeg', 'image/png', 'image/gif'] // 删除非图片类型的媒体
+              [Op.notIn]: ['image/jpeg', 'image/png', 'image/gif']
             }
           } 
         });
@@ -389,7 +388,7 @@ export const postController = {
         return res.status(404).json({ message: '未找到文章' });
       }
 
-      if (post.user_id !== user_id /* && !req.user.isAdmin */) {
+      if (post.user_id !== user_id) {
         return res.status(403).json({ message: '你不是文章所有者，无法删除文章' });
       }
 

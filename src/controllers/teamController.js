@@ -275,9 +275,10 @@ export const teamController = {
    * @access Private (Admin or team owner/manager)
    */
   updateTeam: async (req, res) => {
+    const transaction = await sequelize.transaction();
     try {
       const { id } = req.params;
-      const { team_name, description, is_public, grade, img_url } = req.body;
+      const { team_name, description, is_public, grade, img_url, tag_ids } = req.body;
 
       const updateFields = {};
       if (team_name !== undefined) updateFields.team_name = team_name;
@@ -286,27 +287,79 @@ export const teamController = {
       if (grade !== undefined) updateFields.grade = grade;
       if (img_url !== undefined) updateFields.img_url = img_url;
 
-      if (Object.keys(updateFields).length === 0) {
+      if (Object.keys(updateFields).length === 0 && !tag_ids) {
         return res.status(400).json({ message: 'No fields to update.' });
       }
 
-      // 执行更新
-      const [updatedCount] = await Team.update(updateFields, {
-        where: { team_id: id }
-      });
+      // 1. 更新团队基本信息
+      let updatedCount = 0;
+      if (Object.keys(updateFields).length > 0) {
+        [updatedCount] = await Team.update(updateFields, {
+          where: { team_id: id },
+          transaction
+        });
 
-      if (updatedCount === 0) {
-        return res.status(404).json({ message: 'Team not found or no changes made.' });
+        if (updatedCount === 0) {
+          await transaction.rollback();
+          return res.status(404).json({ message: 'Team not found or no changes made.' });
+        }
       }
 
+      // 2. 如果有 tag_ids，同步更新 team_tags 表
+      if (tag_ids !== undefined) {
+        if (!Array.isArray(tag_ids)) {
+          await transaction.rollback();
+          return res.status(400).json({ message: 'tag_ids must be an array.' });
+        }
+
+        // 验证所有 tag_id 是否存在
+        const existingTags = await tags.findAll({
+          where: { tag_id: tag_ids },
+          attributes: ['tag_id'],
+          transaction
+        });
+        const validTagIds = existingTags.map(t => t.tag_id);
+        if (validTagIds.length !== tag_ids.length) {
+          await transaction.rollback();
+          return res.status(400).json({ message: 'Some tag_ids are invalid.' });
+        }
+
+        // 删除旧的 team_tags 记录
+        await TeamTag.destroy({
+          where: { team_id: id },
+          transaction
+        });
+
+        // 插入新的 team_tags 记录
+        if (tag_ids.length > 0) {
+          const teamTagRecords = tag_ids.map(tag_id => ({
+            team_id: id,
+            tag_id
+          }));
+          await TeamTag.bulkCreate(teamTagRecords, { transaction });
+        }
+      }
+
+      await transaction.commit();
+
       // 返回更新后的团队信息
-      const updatedTeam = await Team.findByPk(id);
+      const updatedTeam = await Team.findByPk(id, {
+        include: [
+          {
+            model: tags,
+            as: 'tags',
+            through: { attributes: [] }
+          }
+        ]
+      });
+
       return res.status(200).json({
         message: 'Team updated successfully.',
         team: updatedTeam
       });
 
     } catch (error) {
+      await transaction.rollback();
       console.error('Update team error:', error);
       res.status(500).json({
         message: 'Server error.',
