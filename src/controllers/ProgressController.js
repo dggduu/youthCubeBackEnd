@@ -160,7 +160,7 @@ export const progressController = {
 
       if (!checkPermission(res, progress.submit_user_id, user_id)) return;
 
-      const transaction = await sequelize.transaction();
+      const transaction = await TeamProgress.sequelize.transaction();
       
       try {
         await progress.update({
@@ -229,7 +229,7 @@ export const progressController = {
 
       if (!checkPermission(res, progress.submit_user_id, user_id)) return;
 
-      const transaction = await sequelize.transaction();
+      const transaction = await TeamProgress.sequelize.transaction();
       
       try {
         await ProgressMedia.destroy({ 
