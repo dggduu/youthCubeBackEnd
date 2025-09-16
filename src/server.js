@@ -26,6 +26,11 @@ import session from 'express-session';
 import { getFilter } from "./utils/sensitiveWordFilter.js";
 import staticRouters from "./routes/staticRouters.js";
 import TeamAnnouncementRouters from "./routes/TeamAnnouncementRouters.js";
+import PaymentProductRoutes from "./routes/paymentProductRoutes.js";
+import UserPaymentRoutes from "./routes/userPaymentRoutes.js";
+import UserSubscriptionRoutes from './routes/userSubscriptionRoutes.js';
+import TrafficBoostRecordRoutes from './routes/trafficBoostRecordRoutes.js';
+
 
 // 加载环境变量
 dotenv.config();
@@ -96,6 +101,10 @@ app.use("/v1", ProgessRouters);
 app.use("/v1", staticRouters);
 app.use("/v1", ThoughtBulletRouters);
 app.use("/v1", TeamAnnouncementRouters);
+app.use("/v1", UserPaymentRoutes);
+app.use("/v1", UserSubscriptionRoutes);
+app.use("/v1", TrafficBoostRecordRoutes);
+app.use("/v1", PaymentProductRoutes);
 
 // 错误处理中间件
 app.use((err, req, res, next) => {

@@ -33,6 +33,27 @@ export const userController = {
       return res.status(500).json({ message: 'Server error.', error: error.message });
     }
   },
+  getAllUsersNoPaging: async (req, res) => {
+    try {
+      const { name } = req.query;
+      const { limit, offset } = getPagination(page, size);
+
+      const whereCondition = name ? { name: { [Op.like]: `%${name}%` } } : {};
+
+      const data = await User.findAndCountAll({
+        where: whereCondition,
+        attributes: { exclude: ['password', 'created_at', 'updated_at'] },
+        order: [['created_at', 'DESC']],
+        limit,
+        offset,
+      });
+
+      return res.status(200).json(data);
+    } catch (error) {
+      console.error('Get all users error:', error);
+      return res.status(500).json({ message: 'Server error.', error: error.message });
+    }
+  },
 
   /**
    * @route GET /api/users/:id

@@ -118,7 +118,7 @@ export const teamController = {
 
       // 仅查询顶层团队
       const whereCondition = {
-        is_public: 1,
+        is_public: true,
         parent_team_id: null,
         ...(search && { team_name: { [Op.like]: `%${search}%` } }),
       };
@@ -148,6 +148,46 @@ export const teamController = {
 
       const response = getPagingData(data, page, limit);
       res.status(200).json(response);
+    } catch (error) {
+      console.error('Get all teams error:', error);
+      res.status(500).json({ message: 'Server error.', error: error.message });
+    }
+  },
+  getAllTeamsNoPaging: async (req, res) => {
+    try {
+      const { page, size, search } = req.query;
+
+      // 仅查询顶层团队
+      const whereCondition = {
+        is_public: true,
+        parent_team_id: null,
+        ...(search && { team_name: { [Op.like]: `%${search}%` } }),
+      };
+
+      const data = await Team.findAndCountAll({
+        attributes: { exclude: ['description'] },
+        where: whereCondition,
+        limit,
+        offset,
+        order: [['create_at', 'DESC']],
+        include: [{
+          model: tags,
+          as: 'tags',
+          attributes: ['tag_id', 'tag_name'],
+          through: { attributes: [] },
+          required: false
+        }]
+      });
+
+      const teams = data.rows;
+      // 限制每个团队最多返回 3 个标签
+      teams.forEach(team => {
+        if (team.tags && team.tags.length > 3) {
+          team.tags = team.tags.slice(0, 3);
+        }
+      });
+
+      res.status(200).json(data);
     } catch (error) {
       console.error('Get all teams error:', error);
       res.status(500).json({ message: 'Server error.', error: error.message });

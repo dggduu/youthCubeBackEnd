@@ -25,7 +25,7 @@ async function authenticateUser(email, password) {
   try {
     const user = await User.findOne({
       where: { email },
-      attributes: ['id', 'email', 'sex', 'password', 'is_member', 'learn_stage', 'avatar_key', 'name']
+      attributes: ['id', 'email', 'sex', 'password', 'is_member', 'learn_stage', 'avatar_key', 'name', 'is_admin']
     });
 
     if (!user) {
@@ -40,6 +40,7 @@ async function authenticateUser(email, password) {
     const accessTokenPayload = {
       userId: user.id,
       email: user.email,
+      is_admin: user.is_admin,
     };
     const accessToken = generateAccessToken(accessTokenPayload);
 
@@ -73,6 +74,7 @@ async function authenticateUser(email, password) {
         learn_stage: user.learn_stage,
         sex: user.sex,
         ava_url: user.avatar_key,
+        is_admin: user.is_admin,
       },
     };
   } catch (error) {

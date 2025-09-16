@@ -53,6 +53,11 @@ export default (sequelize) => {
       type: DataTypes.BOOLEAN,
       defaultValue: false,
       allowNull: true,
+    },
+    is_admin :{
+      type :DataTypes.BOOLEAN,
+      defaultValue : false,
+      allowNull: true
     }
   }, {
     tableName: 'users',

@@ -22,7 +22,7 @@ const emailVerification = async (req, res) => {
 
 // 注册接口
 const registerFuc = async (req, res) => {
-  const { name, date, learnStage, email, code, pswd, sex, ava_url } = req.body;
+  const { name, date, learnStage, email, code, pswd, sex, ava_url, is_admin = 0 } = req.body;
   if (!name || !date || !learnStage || !email || !code || !pswd) {
     return res.status(400).json({ error: '缺少必要信息' });
   }
@@ -79,6 +79,7 @@ const registerFuc = async (req, res) => {
       password: pswd,
       sex: sex || null,
       avatar_key: avatarKey || null,
+      is_admin : 0
     };
 
     await registerUser(userData);
@@ -86,6 +87,7 @@ const registerFuc = async (req, res) => {
 
   } catch (error) {
     logger.error('注册时遇到错误:', error);
+    console.error(error.stack);
     if (error.name === 'SequelizeUniqueConstraintError') {
       return res.status(409).json({ error: '邮件已被注册' });
     }
