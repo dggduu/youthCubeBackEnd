@@ -5,6 +5,18 @@ import { Team } from '../config/Sequelize.js';
 import { Op } from '../config/Sequelize.js';
 import { getPagination, getPagingData } from '../utils/pagination.js';
 import { getFilter } from "../utils/sensitiveWordFilter.js";
+
+/**
+ * 助手函数：检查用户是否为管理员
+ * 这是一个简单的检查，但通常应该作为一个中间件来使用
+ * @param {object} req - Express 请求对象
+ * @returns {boolean}
+ */
+const isAdmin = (req) => {
+  console.log("test:",req.user);
+  return req.user && req.user.is_admin === true;
+};
+
 export const userController = {
   /**
    * @route GET /api/users
@@ -33,22 +45,38 @@ export const userController = {
       return res.status(500).json({ message: 'Server error.', error: error.message });
     }
   },
+
+  /**
+   * @route GET /api/users/all
+   * @desc Get all users without pagination (for admin use)
+   * @access Private (Admin only)
+   */
   getAllUsersNoPaging: async (req, res) => {
     try {
-      const { name } = req.query;
-      const { limit, offset } = getPagination(page, size);
+      const { id, name, page, size } = req.query;
+      const limit = parseInt(size, 10) || 10;
+      const offset = (parseInt(page, 10) || 0) * limit;
 
-      const whereCondition = name ? { name: { [Op.like]: `%${name}%` } } : {};
+      const whereCondition = {};
+      if (id) {
+        whereCondition.id = id;
+      }
+      if (name) {
+        whereCondition.name = { [Op.like]: `%${name}%` };
+      }
 
       const data = await User.findAndCountAll({
         where: whereCondition,
-        attributes: { exclude: ['password', 'created_at', 'updated_at'] },
+        attributes: { exclude: ['password'] },
         order: [['created_at', 'DESC']],
         limit,
         offset,
       });
 
-      return res.status(200).json(data);
+      return res.status(200).json({
+        rows: data.rows,
+        total: data.count,
+      });
     } catch (error) {
       console.error('Get all users error:', error);
       return res.status(500).json({ message: 'Server error.', error: error.message });
@@ -57,7 +85,7 @@ export const userController = {
 
   /**
    * @route GET /api/users/:id
-   * @desc Get a user by ID with posts and optionally team info if team_id is not null
+   * @desc Get a user by ID with posts and optionally team info
    * @access Public
    */
   getUserById: async (req, res) => {
@@ -80,15 +108,8 @@ export const userController = {
         return res.status(404).json({ message: 'User not found.' });
       }
 
-      // Get follower count (people who follow this user)
-      const followerCount = await UserFollows.count({
-        where: { following_id: id },
-      });
-
-      // Get following count (people this user follows)
-      const followingCount = await UserFollows.count({
-        where: { follower_id: id },
-      });
+      const followerCount = await UserFollows.count({ where: { following_id: id } });
+      const followingCount = await UserFollows.count({ where: { follower_id: id } });
 
       const userData = user.toJSON();
       userData.followerCount = followerCount;
@@ -103,7 +124,6 @@ export const userController = {
           attributes: ['team_id', 'team_name', 'description'],
           raw: true,
         });
-
         if (team) {
           userData.team = team;
         } else {
@@ -123,56 +143,68 @@ export const userController = {
    * @desc Update a user by ID
    * @access Private (Owner or Admin)
    */
-  updateUser: async (req, res) => {
-    try {
-      const { id } = req.params;
-      const currentUserId = req.user.userId;
-      // console.log("test:",id,currentUserId,req.user);
-      
-      if (currentUserId !== parseInt(id)) {
-        return res.status(403).json({ message: 'Forbidden: You can only update your own profile.' });
-      }
+    updateUser: async (req, res) => {
+      try {
+        const { id } = req.params;
+        const currentUserId = req.user.userId;
+        const isCurrentUserAdmin = isAdmin(req);
 
-      const { name, birth_date, learn_stage, email, sex, avatar_key, is_member, password, bio } = req.body;
-
-      const filter = getFilter();
-      const result = filter.filter(name , { replace: false });
-      if (result.words.length > 0) {
-        return res.status(422).json({message : "名称含有敏感词"});
-      }
-      const bioresult = filter.filter(bio , { replace: false });
-      if (bioresult.words.length > 0) {
-        return res.status(422).json({message : "简介含有敏感词"});
-      }
-
-      const [updated] = await User.update(
-        { name, birth_date, learn_stage, email, sex, avatar_key, is_member, password, bio },
-        {
-          where: { id },
-          individualHooks: true,
+        // 权限检查：只有自己或是管理员才能编辑
+        if (currentUserId !== parseInt(id) && !isCurrentUserAdmin) {
+          return res.status(403).json({ message: '只有自己或是管理员才能编辑' });
         }
-      );
 
-      if (updated) {
-        const updatedUser = await User.findByPk(id, {
-          attributes: { exclude: ['password'] },
-          include: [
-            {
-              model: Team,
-              as: 'team',
-              attributes: ['team_id', 'team_name']
-            }
-          ]
-        });
-        return res.status(200).json({ message: 'User updated successfully.', user: updatedUser });
+        const { name, birth_date, learn_stage, email, sex, avatar_key, is_member, password, bio, is_admin } = req.body;
+
+        const filter = getFilter();
+        
+        const nameToFilter = name || '';
+        const bioToFilter = bio || '';
+
+        const nameResult = filter.filter(nameToFilter, { replace: false });
+        if (nameResult.words.length > 0) {
+          return res.status(422).json({ message: '名称含有敏感词' });
+        }
+
+        const bioResult = filter.filter(bioToFilter, { replace: false });
+        if (bioResult.words.length > 0) {
+          return res.status(422).json({ message: '简介含有敏感词' });
+        }
+
+        const updateData = {
+            name, birth_date, learn_stage, email, sex, avatar_key, is_member, password, bio
+        };
+
+        if (is_admin !== undefined) {
+          if (isCurrentUserAdmin) {
+            updateData.is_admin = is_admin;
+          } else {
+            console.warn(`非管理员用户 ${currentUserId} 试图修改 is_admin 字段，操作被忽略。`);
+          }
+        }
+        
+        const [updated] = await User.update(
+          updateData,
+          {
+            where: { id },
+            individualHooks: true,
+          }
+        );
+
+        if (updated) {
+          const updatedUser = await User.findByPk(id, {
+            attributes: { exclude: ['password'] },
+            include: [{ model: Team, as: 'team', attributes: ['team_id', 'team_name'] }]
+          });
+          return res.status(200).json({ message: 'User updated successfully.', user: updatedUser });
+        }
+
+        return res.status(404).json({ message: 'User not found or no changes made.' });
+      } catch (error) {
+        console.error('Update user error:', error);
+        return res.status(500).json({ message: 'Server error.', error: error.message });
       }
-
-      return res.status(404).json({ message: 'User not found or no changes made.' });
-    } catch (error) {
-      console.error('Update user error:', error);
-      return res.status(500).json({ message: 'Server error.', error: error.message });
-    }
-  },
+    },
 
   /**
    * @route DELETE /api/users/:id
@@ -183,9 +215,10 @@ export const userController = {
     try {
       const { id } = req.params;
       const currentUserId = req.user.id;
-
-      if (currentUserId !== parseInt(id)) {
-        return res.status(403).json({ message: 'Forbidden: You can only delete your own profile.' });
+      
+      // 权限检查：只有管理员或用户本人才能删除
+      if (currentUserId !== parseInt(id) && !isAdmin(req)) {
+        return res.status(403).json({ message: 'Forbidden: You can only delete your own profile or be an admin.' });
       }
 
       const deleted = await User.destroy({ where: { id } });

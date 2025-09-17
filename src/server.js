@@ -30,7 +30,7 @@ import PaymentProductRoutes from "./routes/paymentProductRoutes.js";
 import UserPaymentRoutes from "./routes/userPaymentRoutes.js";
 import UserSubscriptionRoutes from './routes/userSubscriptionRoutes.js';
 import TrafficBoostRecordRoutes from './routes/trafficBoostRecordRoutes.js';
-
+import backEndRoutes from './routes/backEndRoutes.js';
 
 // 加载环境变量
 dotenv.config();
@@ -105,6 +105,7 @@ app.use("/v1", UserPaymentRoutes);
 app.use("/v1", UserSubscriptionRoutes);
 app.use("/v1", TrafficBoostRecordRoutes);
 app.use("/v1", PaymentProductRoutes);
+app.use("/v1/api/emails/consult",  backEndRoutes);
 
 // 错误处理中间件
 app.use((err, req, res, next) => {

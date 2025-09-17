@@ -3,7 +3,8 @@
 import nodemailer from 'nodemailer';
 import logger from "../config/pino.js";
 import dotenv from 'dotenv';
-
+import Imap from 'imap';
+import { simpleParser } from 'mailparser';
 // 加载环境变量
 dotenv.config();
 
@@ -129,4 +130,91 @@ const sendPasswordResetEmail = async (email) => {
   }
 };
 
-export { sendVerificationEmail, pendingVerifications,sendPasswordResetEmail};
+const consultImap = new Imap({
+  user: process.env.SMTP_CONSULT_USER,
+  password: process.env.SMTP_CONSULT_PASS,
+  host: process.env.SMTP_HOST,
+  port: process.env.IMAP_PORT || 993, // 通常 IMAP 使用 993 端口
+  tls: true,
+  tlsOptions: { rejectUnauthorized: false }
+});
+
+
+/**
+ * 发送由前端构造的邮件
+ * @param {Object} mailOptions - 邮件选项，包含 to, subject, text/html
+ * @returns {Promise<boolean>} 是否发送成功
+ */
+const sendConsultEmail = async (mailOptions) => {
+  try {
+    const info = await consultTransporter.sendMail({
+      ...mailOptions,
+      from: `"咨询中心" <${process.env.SMTP_CONSULT_USER}>`,
+    });
+    logger.info('咨询邮件发送成功:', info.messageId);
+    return true;
+  } catch (error) {
+    logger.error('咨询邮件发送失败:', error);
+    return false;
+  }
+};
+
+/**
+ * 获取咨询邮箱中的所有邮件
+ * @returns {Promise<Array>} 邮件数组
+ */
+const fetchAllConsultEmails = async () => {
+  return new Promise((resolve, reject) => {
+    const emails = [];
+    consultImap.once('ready', () => {
+      consultImap.openBox('INBOX', false, (err, box) => {
+        if (err) {
+          logger.error('打开收件箱失败:', err);
+          return reject(err);
+        }
+        // 搜索所有邮件
+        consultImap.search(['ALL'], (err, results) => {
+          if (err || !results || results.length === 0) {
+            consultImap.end();
+            return resolve(emails);
+          }
+          const f = consultImap.fetch(results, { bodies: '' });
+          f.on('message', (msg) => {
+            msg.on('body', (stream) => {
+              simpleParser(stream, (err, parsed) => {
+                if (err) {
+                  logger.error('解析邮件失败:', err);
+                  return;
+                }
+                emails.push({
+                  from: parsed.from.text,
+                  to: parsed.to.text,
+                  subject: parsed.subject,
+                  text: parsed.text,
+                  html: parsed.html,
+                  date: parsed.date
+                });
+              });
+            });
+          });
+          f.once('error', (err) => {
+            logger.error('获取邮件失败:', err);
+            reject(err);
+          });
+          f.once('end', () => {
+            logger.info(`成功获取 ${emails.length} 封邮件。`);
+            consultImap.end();
+            resolve(emails);
+          });
+        });
+      });
+    });
+    consultImap.once('error', (err) => {
+      logger.error('IMAP连接错误:', err);
+      reject(err);
+    });
+    consultImap.connect();
+  });
+};
+
+export { sendVerificationEmail, pendingVerifications,sendPasswordResetEmail, sendConsultEmail, fetchAllConsultEmails};

@@ -25,7 +25,7 @@ export default (sequelize) => {
       type: DataTypes.TEXT,
       allowNull: true,
     },
-    create_at: {
+    created_at: {
       type: DataTypes.DATE,
       allowNull: false,
       defaultValue: DataTypes.NOW, 
