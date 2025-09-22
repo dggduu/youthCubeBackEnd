@@ -19,6 +19,16 @@ const transporter = nodemailer.createTransport({
   }
 });
 
+const consultTransporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST,
+    port: process.env.SMTP_PORT,
+    secure: false,
+    auth: {
+        user: process.env.IMAP_CONSULT_USER,
+        pass: process.env.IMAP_CONSULT_PSWD,
+    },
+});
+
 // 引入存储验证码的 Map
 const { pendingVerifications } = await import('../middleware/rateLimiter.js');
 
@@ -130,91 +140,111 @@ const sendPasswordResetEmail = async (email) => {
   }
 };
 
-const consultImap = new Imap({
-  user: process.env.SMTP_CONSULT_USER,
-  password: process.env.SMTP_CONSULT_PASS,
-  host: process.env.SMTP_HOST,
-  port: process.env.IMAP_PORT || 993, // 通常 IMAP 使用 993 端口
-  tls: true,
-  tlsOptions: { rejectUnauthorized: false }
-});
-
-
 /**
  * 发送由前端构造的邮件
  * @param {Object} mailOptions - 邮件选项，包含 to, subject, text/html
  * @returns {Promise<boolean>} 是否发送成功
  */
 const sendConsultEmail = async (mailOptions) => {
-  try {
-    const info = await consultTransporter.sendMail({
-      ...mailOptions,
-      from: `"咨询中心" <${process.env.SMTP_CONSULT_USER}>`,
-    });
-    logger.info('咨询邮件发送成功:', info.messageId);
-    return true;
-  } catch (error) {
-    logger.error('咨询邮件发送失败:', error);
-    return false;
-  }
+    try {
+        const info = await consultTransporter.sendMail({
+            ...mailOptions,
+            from: `"青智立方团队客户团队" <${process.env.IMAP_CONSULT_USER}>`,
+        });
+        logger.info('邮件发送成功:', info.messageId);
+        return true;
+    } catch (error) {
+        logger.error('邮件发送失败:', error);
+        return false;
+    }
 };
 
 /**
- * 获取咨询邮箱中的所有邮件
- * @returns {Promise<Array>} 邮件数组
+ * 获取指定 IMAP 邮箱中所有文件夹的所有邮件
+ * @param {string[]} folders - 要获取邮件的文件夹列表
+ * @returns {Promise<Array>} 包含所有邮件的数组
  */
-const fetchAllConsultEmails = async () => {
-  return new Promise((resolve, reject) => {
-    const emails = [];
-    consultImap.once('ready', () => {
-      consultImap.openBox('INBOX', false, (err, box) => {
-        if (err) {
-          logger.error('打开收件箱失败:', err);
-          return reject(err);
-        }
-        // 搜索所有邮件
-        consultImap.search(['ALL'], (err, results) => {
-          if (err || !results || results.length === 0) {
-            consultImap.end();
-            return resolve(emails);
-          }
-          const f = consultImap.fetch(results, { bodies: '' });
-          f.on('message', (msg) => {
-            msg.on('body', (stream) => {
-              simpleParser(stream, (err, parsed) => {
-                if (err) {
-                  logger.error('解析邮件失败:', err);
-                  return;
-                }
-                emails.push({
-                  from: parsed.from.text,
-                  to: parsed.to.text,
-                  subject: parsed.subject,
-                  text: parsed.text,
-                  html: parsed.html,
-                  date: parsed.date
-                });
-              });
-            });
-          });
-          f.once('error', (err) => {
-            logger.error('获取邮件失败:', err);
-            reject(err);
-          });
-          f.once('end', () => {
-            logger.info(`成功获取 ${emails.length} 封邮件。`);
-            consultImap.end();
-            resolve(emails);
-          });
+const fetchAllConsultEmails = async (folders = ['INBOX', 'Junk', 'Sent', 'Trash']) => {
+    const allEmails = [];
+    const imap = new Imap({
+        user: process.env.IMAP_CONSULT_USER,
+        password: process.env.IMAP_CONSULT_PSWD,
+        host: process.env.SMTP_HOST,
+        port: process.env.IMAP_PORT || 993,
+        tls: true,
+        tlsOptions: { rejectUnauthorized: false }
+    });
+
+    try {
+        await new Promise((resolve, reject) => {
+            imap.once('ready', resolve);
+            imap.once('error', reject);
+            imap.connect();
         });
-      });
-    });
-    consultImap.once('error', (err) => {
-      logger.error('IMAP连接错误:', err);
-      reject(err);
-    });
-    consultImap.connect();
-  });
+        for (const folder of folders) {
+            try {
+                const box = await new Promise((resolve, reject) => {
+                    imap.openBox(folder, false, (err, box) => {
+                        if (err) return reject(err);
+                        resolve(box);
+                    });
+                });
+                const uids = await new Promise((resolve, reject) => {
+                    imap.search(['ALL'], (err, results) => {
+                        if (err) return reject(err);
+                        resolve(results);
+                    });
+                });
+
+                if (uids.length === 0) {
+                    logger.warn(`在 ${folder} 文件夹中未找到任何邮件`);
+                    continue; // 继续到下一个文件夹
+                }
+                await new Promise((resolve, reject) => {
+                    const fetch = imap.fetch(uids, { bodies: '' });
+                    let fetchedCount = 0;
+
+                    fetch.on('message', (msg) => {
+                        msg.on('body', (stream) => {
+                            simpleParser(stream, (err, parsed) => {
+                                if (err) {
+                                    logger.error(`解析来自 ${folder} 的邮件失败:`, err);
+                                } else {
+                                    allEmails.push({
+                                        from: parsed.from?.text || '',
+                                        to: parsed.to?.text || '',
+                                        subject: parsed.subject || '',
+                                        text: parsed.text || '',
+                                        html: parsed.html || '',
+                                        date: parsed.date,
+                                        mail_from: folder
+                                    });
+                                }
+                                fetchedCount++;
+                            });
+                        });
+                    });
+
+                    fetch.once('error', reject);
+                    fetch.once('end', resolve);
+                });
+            } catch (err) {
+                logger.warn(`处理文件夹 ${folder} 失败:`, err.message);
+            }
+        }
+        
+        return {
+            message: '邮件获取成功',
+            emails: allEmails
+        };
+
+    } catch (error) {
+        logger.error('IMAP 操作失败:', error);
+        throw error;
+    } finally {
+        imap.end();
+    }
 };
+
 
 export { sendVerificationEmail, pendingVerifications,sendPasswordResetEmail, sendConsultEmail, fetchAllConsultEmails};

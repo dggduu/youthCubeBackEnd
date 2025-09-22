@@ -3,12 +3,6 @@ import { Op, sequelize } from '../config/Sequelize.js';
 import { getPagination, getPagingData } from '../utils/pagination.js';
 import { getFilter } from "../utils/sensitiveWordFilter.js";
 
-/**
- * 通用错误处理函数
- * @param {object} res - Express response object
- * @param {Error} error - 捕获的错误对象
- * @param {string} message - 用户友好的错误消息
- */
 const handleError = (res, error, message) => {
   console.error(message, error);
   res.status(500).json({
@@ -22,13 +16,6 @@ const isAdmin = (req) => {
   return req.user && req.user.is_admin === true;
 };
 
-/**
- * 验证当前用户是否为指定团队的所有者
- * @param {number} userId - 当前用户ID
- * @param {number} teamId - 团队ID
- * @param {object} transaction - Sequelize 事务
- * @returns {boolean}
- */
 const validateTeamOwner = async (userId, teamId, transaction) => {
   const team = await Team.findOne({
     where: { team_id: teamId },
@@ -49,11 +36,6 @@ const validateTeamOwner = async (userId, teamId, transaction) => {
 };
 
 export const teamController = {
-  /**
-   * @route POST /api/teams
-   * @desc Create a new team and its corresponding chat room
-   * @access Private
-   */
   createTeam: async (req, res) => {
     const transaction = await Team.sequelize.transaction();
     const user_id = req.user.userId;
@@ -136,11 +118,6 @@ export const teamController = {
     }
   },
 
-  /**
-   * @route GET /api/teams
-   * @desc Get all top-level public teams (exclude sub-teams) with pagination and search
-   * @access Public
-   */
   getAllTeams: async (req, res) => {
     try {
       const { page = 0, size = 10, search } = req.query;
@@ -252,7 +229,7 @@ export const teamController = {
         ...team.toJSON(),
         captain,
         members,
-        chatRoom: undefined, // Cleanup
+        chatRoom: undefined,
       };
     });
 
@@ -266,11 +243,6 @@ export const teamController = {
   }
   },
 
-  /**
-   * @route GET /api/teams/:id
-   * @desc Get a team by ID, including its sub-teams
-   * @access Public
-   */
   getTeamById: async (req, res) => {
     try {
       const { id } = req.params;
@@ -324,11 +296,6 @@ export const teamController = {
     }
   },
 
-  /**
-   * @route PUT /api/teams/:id
-   * @desc Update a team by ID
-   * @access Private (Admin or team owner/manager)
-   */
   updateTeam: async (req, res) => {
     const transaction = await sequelize.transaction();
     try {
@@ -401,11 +368,6 @@ export const teamController = {
     }
   },
 
-  /**
-   * @route DELETE /api/teams/:id
-   * @desc Delete a team by ID
-   * @access Private (Admin or team owner/manager)
-   */
   deleteTeam: async (req, res) => {
     const transaction = await Team.sequelize.transaction();
     try {
@@ -458,11 +420,6 @@ export const teamController = {
     }
   },
 
-  /**
-   * @route POST /api/teams/:id/subteam
-   * @desc 创建子团队（仅限父团队的 owner）
-   * @access Private (Parent team owner only)
-   */
   createSubTeam: async (req, res) => {
     const transaction = await Team.sequelize.transaction();
     const user_id = req.user.userId;
@@ -524,11 +481,6 @@ export const teamController = {
     }
   },
 
-  /**
-   * @route DELETE /api/teams/:id/subteam/:subTeamId
-   * @desc 删除子团队（仅限父团队的 owner）
-   * @access Private
-   */
   deleteSubTeam: async (req, res) => {
     const transaction = await Team.sequelize.transaction();
     const user_id = req.user.userId;
