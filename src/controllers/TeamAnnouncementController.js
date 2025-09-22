@@ -29,11 +29,6 @@ const checkTeamPermissions = async (userId, teamId, transaction, roles = ['owner
 };
 
 export const teamAnnouncementController = {
-  /**
-   * @route POST /api/teams/:teamId/announcements
-   * @desc Create a new team announcement (team leader/manager only)
-   * @access Private (Team leader/manager only)
-   */
   createAnnouncement: async (req, res) => {
     const transaction = await TeamAnnouncement.sequelize.transaction();
     try {
@@ -86,11 +81,6 @@ export const teamAnnouncementController = {
     }
   },
 
-  /**
-   * @route GET /api/teams/:teamId/announcements
-   * @desc Get all announcements for a team (pinned first, then by creation date)
-   * @access Private (Team members only)
-   */
   getTeamAnnouncements: async (req, res) => {
     try {
       const teamId = validateId(req.params.teamId, 'team');
@@ -142,11 +132,6 @@ export const teamAnnouncementController = {
     }
   },
 
-  /**
-   * @route GET /api/teams/:teamId/announcements/:announcementId
-   * @desc Get a specific announcement by ID
-   * @access Private (Team members only)
-   */
   getAnnouncementById: async (req, res) => {
     try {
       const teamId = validateId(req.params.teamId, 'team');
@@ -202,11 +187,6 @@ export const teamAnnouncementController = {
     }
   },
 
-  /**
-   * @route PUT /api/teams/:teamId/announcements/:announcementId
-   * @desc Update an announcement (creator or team leader/manager only)
-   * @access Private (Creator or team leader/manager only)
-   */
   updateAnnouncement: async (req, res) => {
     const transaction = await TeamAnnouncement.sequelize.transaction();
     try {
@@ -273,11 +253,6 @@ export const teamAnnouncementController = {
     }
   },
 
-  /**
-   * @route DELETE /api/teams/:teamId/announcements/:announcementId
-   * @desc Delete an announcement (creator or team leader/manager only)
-   * @access Private (Creator or team leader/manager only)
-   */
   deleteAnnouncement: async (req, res) => {
     const transaction = await TeamAnnouncement.sequelize.transaction();
     try {
@@ -324,11 +299,6 @@ export const teamAnnouncementController = {
     }
   },
 
-  /**
-   * @route PATCH /api/teams/:teamId/announcements/:announcementId/pin
-   * @desc Toggle pin status of an announcement (team leader/manager only)
-   * @access Private (Team leader/manager only)
-   */
   togglePinAnnouncement: async (req, res) => {
     const transaction = await TeamAnnouncement.sequelize.transaction();
     try {

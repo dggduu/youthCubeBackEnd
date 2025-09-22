@@ -2,11 +2,6 @@ import { PaymentProduct } from "../config/Sequelize.js";
 import { getPagination, getPagingData } from "../utils/pagination.js";
 
 export const paymentProductController = {
-  /**
-   * @route POST /api/payment-products
-   * @desc Create a new payment product (Admin only)
-   * @access Private + Admin
-   */
   createPaymentProduct: async (req, res) => {
     if (!req.user.is_admin) {
       return res.status(403).json({ message: 'Forbidden: Admins only.' });
@@ -66,11 +61,6 @@ export const paymentProductController = {
     }
   },
 
-  /**
-   * @route GET /api/payment-products/:id
-   * @desc Get a single payment product by ID
-   * @access Private
-   */
   getPaymentProductById: async (req, res) => {
     try {
       const { id } = req.params;
@@ -87,11 +77,6 @@ export const paymentProductController = {
     }
   },
 
-  /**
-   * @route PUT /api/payment-products/:id
-   * @desc Update an existing payment product (Admin only)
-   * @access Private + Admin
-   */
   updatePaymentProduct: async (req, res) => {
     if (!req.user.is_admin) {
       return res.status(403).json({ message: 'Forbidden: Admins only.' });
@@ -115,11 +100,6 @@ export const paymentProductController = {
     }
   },
 
-  /**
-   * @route DELETE /api/payment-products/:id
-   * @desc Soft-delete a payment product (Admin only)
-   * @access Private + Admin
-   */
   deletePaymentProduct: async (req, res) => {
     if (!req.user.is_admin) {
       return res.status(403).json({ message: 'Forbidden: Admins only.' });

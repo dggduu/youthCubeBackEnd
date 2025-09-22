@@ -39,33 +39,33 @@ dotenv.config();
 const app = express();
 
 // 速率限制
-// const limiter = rateLimit({
-//   windowMs: 15 * 60 * 1000,
-//   limit: 400,
-//   standardHeaders: 'draft-8',
-//   legacyHeaders: false,
-// });
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 400,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+});
 
-// const uploadLimiter = rateLimit({
-//   windowMs: 15 * 60 * 1000,
-//   max: 500,
-//   standardHeaders: 'draft-8',
-//   legacyHeaders: false,
-// });
+const uploadLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 500,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+});
 
-// const dlLimiter = rateLimit({
-//   windowMs: 15 * 60 * 1000,
-//   max: 500,
-//   standardHeaders: 'draft-8',
-//   legacyHeaders: false,
-// });
+const dlLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 500,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+});
 
-// const authLimiter = rateLimit({
-//   windowMs: 15 * 60 * 1000,
-//   max: 100,
-//   standardHeaders: 'draft-8',
-//   legacyHeaders: false,
-// });
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+});
 
 const filter = getFilter();
 
@@ -81,7 +81,7 @@ app.use(express.json());
 app.use(cors({ origin: '*' }));
 app.use(helmet());
 app.use(morgan('dev'));
-// app.use(limiter);
+app.use(limiter);
 
 // 连接数据库
 connectDB();

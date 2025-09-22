@@ -8,11 +8,6 @@ import { getPagination, getPagingData } from '../utils/pagination.js';
 import { getFilter } from "../utils/sensitiveWordFilter.js";
 // 导出 commentController 对象
 export const commentController = {
-  /**
-   * @route POST /api/posts/:postId/comments
-   * @desc Add a comment to a post
-   * @access Private
-   */
   addCommentToPost: async (req, res) => {
     try {
       const { postId } = req.params;
@@ -60,11 +55,6 @@ export const commentController = {
     }
   },
 
-  /**
-   * @route GET /api/posts/:postId/comments
-   * @desc Get comments for a specific post
-   * @access Public
-   */
   getCommentsForPost: async (req, res) => {
       try {
         const { postId } = req.params;
@@ -108,11 +98,6 @@ export const commentController = {
       }
     },
 
-  /**
-   * @route GET /api/comments/:commentId/replies
-   * @desc Get replies for a specific comment
-   * @access Public
-   */
   getRepliesForComment: async (req, res) => {
     try {
       const { commentId } = req.params;
@@ -140,11 +125,6 @@ export const commentController = {
     }
   },
 
-  /**
-   * @route PUT /api/comments/:id
-   * @desc Update a comment
-   * @access Private (Owner)
-   */
   updateComment: async (req, res) => {
     try {
       const { id } = req.params;
@@ -176,11 +156,6 @@ export const commentController = {
     }
   },
 
-  /**
-   * @route DELETE /api/comments/:id
-   * @desc Delete a comment
-   * @access Private (Owner or Admin)
-   */
   deleteComment: async (req, res) => {
     try {
       const { id } = req.params;
@@ -211,11 +186,6 @@ export const commentController = {
     }
   },
 
-  /**
-   * @route POST /api/comments/:id/like
-   * @desc Like a comment
-   * @access Private
-   */
   likeComment: async (req, res) => {
     try {
       const { id: commentId } = req.params;
@@ -238,11 +208,6 @@ export const commentController = {
     }
   },
 
-  /**
-   * @route DELETE /api/comments/:id/unlike
-   * @desc Unlike a comment
-   * @access Private
-   */
   unlikeComment: async (req, res) => {
     try {
       const { id: commentId } = req.params;

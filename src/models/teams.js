@@ -1,4 +1,3 @@
-// models/Team.js
 import { DataTypes } from "sequelize";
 
 export default (sequelize) => {
@@ -93,7 +92,7 @@ export default (sequelize) => {
       });
     }
 
-    // 自关联：团队 → 子团队
+    // 团队 → 子团队
     Team.hasMany(models.Team, {
       foreignKey: 'parent_team_id',
       as: 'subTeams'

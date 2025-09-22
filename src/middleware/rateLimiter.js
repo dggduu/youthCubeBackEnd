@@ -1,5 +1,3 @@
-// rateLimiter.js
-
 const pendingVerifications = new Map();
 
 const rateLimiter = (req, res, next) => {

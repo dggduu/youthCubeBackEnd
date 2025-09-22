@@ -5,11 +5,6 @@ import { Op } from '../config/Sequelize.js';
 import { getPagination, getPagingData } from '../utils/pagination.js';
 import { getFilter } from "../utils/sensitiveWordFilter.js";
 export const tagController = {
-  /**
-   * @route POST /api/tags
-   * @desc Create a new tag
-   * @access Private (Admin only)
-   */
   createTag: async (req, res) => {
     try {
       const { tag_name } = req.body;
@@ -37,11 +32,6 @@ export const tagController = {
     }
   },
 
-  /**
-   * @route GET /api/tags
-   * @desc Get all tags
-   * @access Public
-   */
   getAllTags: async (req, res) => {
     try {
       const { page, size } = req.query;
@@ -62,11 +52,6 @@ export const tagController = {
     }
   },
 
-  /**
-   * @route GET /api/tags/:id
-   * @desc Get a tag by ID
-   * @access Public
-   */
   getTagById: async (req, res) => {
     try {
       const { id: tagId } = req.params;
@@ -86,11 +71,6 @@ export const tagController = {
     }
   },
 
-  /**
-   * @route GET /api/tags/:id/posts
-   * @desc Get all posts associated with a specific tag
-   * @access Public
-   */
   getPostsByTag: async (req, res) => {
     try {
       const { id: tagId } = req.params;

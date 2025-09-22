@@ -3,11 +3,6 @@ import { getPagination, getPagingData } from '../utils/pagination.js';
 import { Invitation, Team, User, FriendInvitation, ChatRoomMember, UserFollows, ChatRoom, PrivateChat } from "../config/Sequelize.js";
 import { getFilter } from "../utils/sensitiveWordFilter.js";
 export const invitationController = {
-  /**
-   * @route GET /api/invitations/team
-   * @desc 获取当前用户收到的所有队伍邀请
-   * @access Private
-   */
   getMyTeamInvitations: async (req, res) => {
     try {
       const currentUserId = req.user.userId;
@@ -44,11 +39,6 @@ export const invitationController = {
     }
   },
 
-  /**
-   * @route GET /api/invitations/friend
-   * @desc 获取当前用户收到的好友邀请
-   * @access Private
-   */
   getMyFriendInvitations: async (req, res) => {
     try {
       const currentUserId = req.user.userId;
@@ -76,11 +66,6 @@ export const invitationController = {
     }
   },
 
-  /**
-   * @route POST /api/invitations/team
-   * @desc 邀请用户加入队伍（可选 user_id 或 email）
-   * @access Private
-   */
   inviteToTeam: async (req, res) => {
     try {
       const currentUserId = req.user.userId;
@@ -156,11 +141,6 @@ export const invitationController = {
     }
   },
 
-  /**
-   * @route POST /api/invitations/friend
-   * @desc 邀请用户成为好友（可选 user_id 或 email）
-   * @access Private
-   */
   inviteAsFriend: async (req, res) => {
     try {
       const currentUserId = req.user.userId;
@@ -211,11 +191,6 @@ export const invitationController = {
     }
   },
 
-  /**
-   * @route PATCH /api/invitations/team/:id/accept
-   * @desc 接受队伍邀请，并加入聊天室
-   * @access Private
-   */
   acceptTeamInvitation: async (req, res) => {
     const transaction = await Invitation.sequelize.transaction();
     try {
@@ -319,11 +294,6 @@ export const invitationController = {
     }
   },
 
-  /**
-   * @route PATCH /api/invitations/friend/:id/accept
-   * @desc 接受好友邀请，添加双向关注
-   * @access Private
-   */
   acceptFriendInvitation: async (req, res) => {
     const transaction = await FriendInvitation.sequelize.transaction();
 
@@ -467,11 +437,6 @@ export const invitationController = {
     }
   },
 
-  /**
-   * @route PATCH /api/invitations/team/:id/reject
-   * @desc 拒绝队伍邀请
-   * @access Private
-   */
   rejectTeamInvitation: async (req, res) => {
     try {
       const currentUserId = req.user.userId;
@@ -497,11 +462,6 @@ export const invitationController = {
     }
   },
 
-  /**
-   * @route PATCH /api/invitations/friend/:id/reject
-   * @desc 拒绝好友邀请
-   * @access Private
-   */
   rejectFriendInvitation: async (req, res) => {
     try {
       const currentUserId = req.user.userId;
@@ -526,11 +486,7 @@ export const invitationController = {
       return res.status(500).json({ message: 'Internal server error.' });
     }
   },
-  /**
-   * @route GET /api/invitations/team/:team_id
-   * @desc 获取队伍的所有邀请信息（仅限管理员）
-   * @access Private
-   */
+
   getTeamInvitations: async (req, res) => {
     const transaction = await Invitation.sequelize.transaction();
     try {
@@ -554,7 +510,7 @@ export const invitationController = {
         where: {
           room_id: chatRoom.room_id,
           user_id: currentUserId,
-          role: { [Op.in]: ['owner', 'co_owner'] } // 必须是owner或co_owner
+          role: { [Op.in]: ['owner', 'co_owner'] }
         },
         transaction
       });

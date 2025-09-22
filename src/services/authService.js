@@ -105,7 +105,7 @@ const refreshAuthToken = async (oldRefreshToken) => {
     // 检查是否已过期
     const now = new Date();
     if (now > new Date(storedRefreshToken.expires_at)) {
-      // refreshToken 已过期：删除旧 token 并生成新的
+      // refreshToken 已过期，删除旧 token 并生成新的
       await storedRefreshToken.destroy();
 
       // 生成新的 accessToken 和 refreshToken
@@ -131,7 +131,7 @@ const refreshAuthToken = async (oldRefreshToken) => {
         refreshToken: newRefreshToken,
       };
     } else {
-      // refreshToken 未过期：直接使用原 refreshToken，只刷新 accessToken
+      // refreshToken 未过期->直接使用原 refreshToken，只刷新 accessToken
       const newAccessToken = generateAccessToken({ userId: decoded.userId, email: decoded.email });
 
       return {

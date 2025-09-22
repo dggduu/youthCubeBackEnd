@@ -2,11 +2,6 @@ import { UserSubscription, PaymentProduct, UserPayment } from "../config/Sequeli
 import { getPagination, getPagingData } from "../utils/pagination.js";
 
 export const userSubscriptionController = {
-  /**
-   * @route GET /api/subscriptions/all
-   * @desc Get all user subscriptions (Admin only)
-   * @access Private/Admin
-   */
   getAllUserSubscriptions: async (req, res) => {
     if (!req.user.is_admin) {
       return res.status(403).json({ message: 'Forbidden: Admins only.' });
@@ -33,11 +28,7 @@ export const userSubscriptionController = {
       return res.status(500).json({ message: 'Internal server error.' });
     }
   },
-  /**
-   * @route POST /api/subscriptions
-   * @desc Create a new user subscription
-   * @access Private
-   */
+
   createUserSubscription: async (req, res) => {
     try {
       const { user_id, product_id, payment_id, start_at, end_at, auto_renew, team_id, current_value } = req.body;
@@ -61,11 +52,6 @@ export const userSubscriptionController = {
     }
   },
 
-  /**
-   * @route GET /api/subscriptions/me
-   * @desc Get current user's subscription history
-   * @access Private
-   */
   getMySubscriptions: async (req, res) => {
     try {
       const currentUserId = req.user.userId;
@@ -96,11 +82,6 @@ export const userSubscriptionController = {
     }
   },
 
-  /**
-   * @route GET /api/subscriptions/:id
-   * @desc Get a single user subscription by ID
-   * @access Private
-   */
   getUserSubscriptionById: async (req, res) => {
     try {
       const { id } = req.params;
@@ -122,11 +103,6 @@ export const userSubscriptionController = {
     }
   },
 
-  /**
-   * @route PUT /api/subscriptions/:id/cancel
-   * @desc Cancel an active user subscription
-   * @access Private
-   */
   cancelUserSubscription: async (req, res) => {
     try {
       const { id } = req.params;
@@ -151,11 +127,7 @@ export const userSubscriptionController = {
       return res.status(500).json({ message: 'Internal server error.' });
     }
   },
-  /**
-   * @route GET /api/subscriptions/all/nopaging
-   * @desc Get all user subscriptions without pagination (Admin only)
-   * @access Private/Admin
-   */
+
   getAllSubscriptionsNoPaging: async (req, res) => {
     if (!req.user.is_admin) {
       return res.status(403).json({ message: 'Forbidden: Admins only.' });

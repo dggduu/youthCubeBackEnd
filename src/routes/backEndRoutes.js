@@ -22,10 +22,6 @@ router.post('/send', async (req, res) => {
   }
 });
 
-/**
- * GET /api/emails/consult/inbox
- * 获取咨询邮箱中的所有邮件
- */
 router.get('/inbox', async (req, res) => {
   try {
     const emails = await fetchAllConsultEmails();

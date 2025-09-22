@@ -32,11 +32,6 @@ const consultTransporter = nodemailer.createTransport({
 // 引入存储验证码的 Map
 const { pendingVerifications } = await import('../middleware/rateLimiter.js');
 
-/**
- * 发送验证码邮件
- * @param {string} email - 接收者的邮箱地址
- * @returns {Promise<boolean>} 是否发送成功
- */
 const sendVerificationEmail = async (email) => {
   const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
 
@@ -140,11 +135,6 @@ const sendPasswordResetEmail = async (email) => {
   }
 };
 
-/**
- * 发送由前端构造的邮件
- * @param {Object} mailOptions - 邮件选项，包含 to, subject, text/html
- * @returns {Promise<boolean>} 是否发送成功
- */
 const sendConsultEmail = async (mailOptions) => {
     try {
         const info = await consultTransporter.sendMail({
@@ -159,11 +149,6 @@ const sendConsultEmail = async (mailOptions) => {
     }
 };
 
-/**
- * 获取指定 IMAP 邮箱中所有文件夹的所有邮件
- * @param {string[]} folders - 要获取邮件的文件夹列表
- * @returns {Promise<Array>} 包含所有邮件的数组
- */
 const fetchAllConsultEmails = async (folders = ['INBOX', 'Junk', 'Sent', 'Trash']) => {
     const allEmails = [];
     const imap = new Imap({

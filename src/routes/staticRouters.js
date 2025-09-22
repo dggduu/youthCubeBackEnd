@@ -10,10 +10,7 @@ const __dirname = dirname(__filename);
 
 const ASSETS_DIR = path.join(__dirname, '..', 'assets');
 
-/**
- * GET /static/:page
- *   /static/intro      -> 返回 ../assets/intro.html
- */
+
 router.get('/static/:page', (req, res) => {
   const { page } = req.params;
 

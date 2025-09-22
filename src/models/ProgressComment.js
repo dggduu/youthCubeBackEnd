@@ -54,7 +54,7 @@ export default (sequelize) => {
       as: 'author',
     });
 
-    // 自引用：父评论 -> 子评论（回复）
+    // 父评论->子评论（回复）
     ProgressComment.belongsTo(models.ProgressComment, {
       foreignKey: 'parent_comment_id',
       as: 'parentComment',

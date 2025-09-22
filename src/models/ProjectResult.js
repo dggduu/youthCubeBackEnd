@@ -19,7 +19,6 @@ export default (sequelize) => {
     post_id: {
       type: DataTypes.INTEGER,
       allowNull: true,
-      // 可选：添加外键约束（推荐）
       // references: {
       //   model: 'posts',
       //   key: 'post_id'

@@ -4,11 +4,6 @@ import logger from "../config/pino.js";
 import { getPagination, getPagingData } from "../utils/pagination.js";
 import { getFilter } from "../utils/sensitiveWordFilter.js";
 export const chatRoomController = {
-  /**
-   * @route PUT /api/chatrooms/:room_id
-   * @desc 修改聊天室名称
-   * @access Private（需权限为 owner 或 co_owner）
-   */
   updateChatRoomName: async (req, res) => {
     const { room_id } = req.params;
     const { name } = req.body;
@@ -45,11 +40,6 @@ export const chatRoomController = {
     }
   },
 
-  /**
-   * @route PUT /api/chatrooms/:room_id/members/:user_id/role
-   * @desc 更改用户在聊天室中的权限（owner/co_owner/member）
-   * @access Private（仅限 owner 或 co_owner）
-   */
   updateChatRoomMemberRole: async (req, res) => {
     const { room_id, user_id } = req.params;
     const { role } = req.body;
@@ -124,11 +114,6 @@ export const chatRoomController = {
     }
   },
 
-  /**
-   * @route POST /api/chatrooms/:room_id/transfer-owner
-   * @desc 转让队长权限给另一个成员
-   * @access Private（仅限当前 owner）
-   */
   transferOwner: async (req, res) => {
     const { room_id } = req.params;
     const { newOwnerId } = req.body;
@@ -164,7 +149,7 @@ export const chatRoomController = {
         return res.status(400).json({ message: '该用户已经是队长' });
       }
 
-      // 确保目标用户不是 co_owner 或 member，可以设为 owner
+      // 确保目标用户不是 co_owner 或 member
       const existingOwner = await ChatRoomMember.findOne({
         where: {
           room_id,
@@ -499,11 +484,7 @@ listPrivateChatRooms: async (req, res) => {
         return res.status(500).json({ message: '服务器内部错误' });
       }
     },
-  /**
-   * @route DELETE /api/chatrooms/:room_id/members/:user_id
-   * @desc 从聊天室移除成员
-   * @access Private（需权限为 owner 或 co_owner）
-   */
+
   removeChatRoomMember: async (req, res) => {
       const { room_id, user_id } = req.params;
       const currentUserId = req.user.userId;
@@ -607,12 +588,6 @@ listPrivateChatRooms: async (req, res) => {
     }
   },
 
-    
-  /**
-   * @route POST /api/chatrooms/:room_id/invitations
-   * @desc 邀请用户加入聊天室
-   * @access Private（需权限为 owner 或 co_owner）
-   */
   inviteToChatRoom: async (req, res) => {
     const { room_id } = req.params;
     const { user_id, email, description } = req.body;
@@ -676,15 +651,10 @@ listPrivateChatRooms: async (req, res) => {
     }
   },
 
-  /**
-   * @route PUT /api/chatrooms/:room_id/invitations/:invitation_id/respond
-   * @desc 回应邀请（接受或拒绝）
-   * @access Private（被邀请用户）
-   */
 respondToInvitation: async (req, res) => {
   const { invitation_id } = req.params;
-  const { action } = req.body; // 'accept' 或 'reject'
-  const currentUserId = req.user.userId; // 当前操作者（管理员）
+  const { action } = req.body;
+  const currentUserId = req.user.userId;
   if (!['accept', 'reject'].includes(action)) {
     return res.status(400).json({ message: '无效的操作类型' });
   }
@@ -753,7 +723,7 @@ respondToInvitation: async (req, res) => {
         return res.status(400).json({ message: '该用户已是聊天室成员' });
       }
 
-      // 添加用户到聊天室（使用被邀请人 ID）
+      // 添加用户到聊天室
       await ChatRoomMember.create({
         room_id: roomId,
         user_id: invitedUserId,
@@ -792,11 +762,6 @@ respondToInvitation: async (req, res) => {
   }
 },
 
-  /**
-   * @route PUT /api/teams/:team_id
-   * @desc 更新团队信息（名称和描述）
-   * @access Private（需权限为 owner 或 co_owner）
-   */
   updateTeamInfo: async (req, res) => {
     const { team_id } = req.params;
     const { team_name, description, is_public, grade } = req.body;
@@ -859,11 +824,7 @@ respondToInvitation: async (req, res) => {
       return res.status(500).json({ message: '服务器内部错误' });
     }
   },
-  /**
-   * @route GET /api/chatrooms/:room_id/invitations
-   * @desc 获取聊天室的所有邀请记录（管理员操作）
-   * @access Private（需权限为 owner 或 co_owner）
-   */
+
   listChatRoomInvitations: async (req, res) => {
     const { room_id } = req.params;
     const currentUserId = req.user.userId;
@@ -955,11 +916,7 @@ respondToInvitation: async (req, res) => {
       return res.status(500).json({ message: '服务器内部错误' });
     }
   },
-  /**
-   * @route POST /api/teams/:team_id/members/:user_id
-   * @desc 队长或管理员直接将用户拉入子团队聊天室（无需邀请，不改变用户所属主团队）
-   * @access Private (仅限 owner 或 co_owner)
-   */
+
   inviteUserToSubTeamDirect: async (req, res) => {
     const transaction = await sequelize.transaction();
     try {

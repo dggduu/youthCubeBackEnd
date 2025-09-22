@@ -2,11 +2,6 @@ import { TrafficBoostRecord, UserPayment, Posts } from "../config/Sequelize.js";
 import { getPagination, getPagingData } from "../utils/pagination.js";
 
 export const trafficBoostRecordController = {
-  /**
-   * @route GET /api/traffic-boost-records/all
-   * @desc Get all traffic boost records (Admin only)
-   * @access Private/Admin
-   */
   getAllTrafficBoostRecords: async (req, res) => {
     if (!req.user.is_admin) {
       return res.status(403).json({ message: 'Forbidden: Admins only.' });
@@ -33,11 +28,7 @@ export const trafficBoostRecordController = {
       return res.status(500).json({ message: 'Internal server error.' });
     }
   },
-  /**
-   * @route POST /api/traffic-boost-records
-   * @desc Create a new traffic boost record
-   * @access Private
-   */
+
   createTrafficBoostRecord: async (req, res) => {
     try {
       const { payment_id, post_id, views_consumed, cost_amount, metadata } = req.body;
@@ -57,11 +48,6 @@ export const trafficBoostRecordController = {
     }
   },
 
-  /**
-   * @route GET /api/traffic-boost-records/posts/:postId
-   * @desc Get all traffic boost records for a specific post
-   * @access Private
-   */
   getTrafficBoostRecordsForPost: async (req, res) => {
     try {
       const { postId } = req.params;
@@ -86,11 +72,6 @@ export const trafficBoostRecordController = {
     }
   },
 
-  /**
-   * @route GET /api/traffic-boost-records/:id
-   * @desc Get a single traffic boost record by ID
-   * @access Private
-   */
   getTrafficBoostRecordById: async (req, res) => {
     try {
       const { id } = req.params;
@@ -112,11 +93,6 @@ export const trafficBoostRecordController = {
     }
   },
 
-  /**
-   * @route DELETE /api/traffic-boost-records/:id
-   * @desc Delete a traffic boost record
-   * @access Private
-   */
  deleteTrafficBoostRecord: async (req, res) => {
     if (!req.user.is_admin) {
       return res.status(403).json({ message: 'Forbidden: Admins only.' });

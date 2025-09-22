@@ -4,11 +4,6 @@ import logger from "../config/pino.js";
 import { getPagination, getPagingData } from '../utils/pagination.js';
 
 export const thoughtBulletController = {
-  /**
-   * @route POST /api/thought-bullets
-   * @desc Create a new thought bullet (弹幕)
-   * @access Private
-   */
   createThoughtBullet: async (req, res) => {
     try {
       const { message } = req.body;
@@ -30,11 +25,6 @@ export const thoughtBulletController = {
     }
   },
 
-  /**
-   * @route GET /api/thought-bullets
-   * @desc Retrieve paginated list of thought bullets (弹幕)
-   * @access Public
-   */
   getThoughtBullets: async (req, res) => {
     try {
       const { page, size } = req.query;
@@ -57,11 +47,7 @@ export const thoughtBulletController = {
       res.status(500).json({ message: 'Server error.', error: error.message });
     }
   },
-  /**
-   * @route GET /api/thought-bullets
-   * @desc Retrieve paginated list of thought bullets (弹幕)
-   * @access Public
-   */
+
   getMyThoughtBullets: async (req, res) => {
     try {
       const { page, size } = req.query;
@@ -88,11 +74,6 @@ export const thoughtBulletController = {
     }
   },
 
-  /**
-   * @route PUT /api/thought-bullets/:id
-   * @desc Update a thought bullet by id
-   * @access Private
-   */
   updateThoughtBullet: async (req, res) => {
     try {
       const { id } = req.params;
@@ -118,11 +99,6 @@ export const thoughtBulletController = {
     }
   },
 
-  /**
-   * @route DELETE /api/thought-bullets/:id
-   * @desc Delete a thought bullet by id
-   * @access Private
-   */
   deleteThoughtBullet: async (req, res) => {
     try {
       const { id } = req.params;

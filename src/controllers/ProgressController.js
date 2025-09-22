@@ -295,12 +295,6 @@ export const progressController = {
     }
   },
 
-
-  /**
-   * @route GET /api/progress/:progressId/comments
-   * @desc 获取某条进度下的一级评论
-   * @access Public
-   */
   getCommentsForProgress : async (req, res) => {
     try {
       const { progressId } = req.params;

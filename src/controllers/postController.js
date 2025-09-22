@@ -5,12 +5,6 @@ import logger from "../config/pino.js";
 import { getPagination, getPagingData } from '../utils/pagination.js';
 import { getFilter } from "../utils/sensitiveWordFilter.js";
 
-/**
- * 检查用户是否有权限修改或删除文章。
- * @param {number} userId - 当前用户ID
- * @param {number} postId - 文章ID
- * @returns {boolean} - true 如果用户是文章所有者或管理员，否则 false
- */
 const checkPermissions = async (userId, postId) => {
     const post = await Posts.findByPk(postId, {
         include: [{
@@ -30,12 +24,6 @@ const checkPermissions = async (userId, postId) => {
     return { authorized: false, message: '你不是文章的所有者或管理员' };
 };
 
-/**
- * 敏感词过滤通用函数
- * @param {string} text - 需要检查的文本
- * @param {string} fieldName - 字段名（例如：'标题'）
- * @returns {object|null} - 返回错误对象或 null
- */
 const validateSensitiveWords = (text, fieldName) => {
     if (!text) {
         return null; // 如果文本为空，跳过检查
@@ -48,13 +36,7 @@ const validateSensitiveWords = (text, fieldName) => {
     return null;
 };
 
-// 导出 postController 对象
 export const postController = {
-    /**
-     * @route POST /api/posts
-     * @desc Create a new post
-     * @access Private
-     */
     createPost: async (req, res) => {
         try {
             const { title, content, cover_image_url, tagIds, attachments } = req.body;
@@ -193,11 +175,7 @@ export const postController = {
             });
         }
     },
-    /**
-     * @route GET /api/posts
-     * @desc Get all posts with pagination, filtering, sorting
-     * @access Public
-     */
+
     getAllPosts: async (req, res) => {
         try {
             const { page, size, userId, search, sortBy, order, tagId } = req.query;
@@ -287,11 +265,6 @@ export const postController = {
         }
     },
 
-    /**
-     * @route GET /api/posts/:id
-     * @desc Get a single post by ID
-     * @access Public
-     */
     getPostById: async (req, res) => {
         try {
             const { id } = req.params;
@@ -332,11 +305,6 @@ export const postController = {
         }
     },
 
-    /**
-     * @route PUT /api/posts/:id
-     * @desc Update a post by ID
-     * @access Private (Owner or Admin)
-     */
     updatePost: async (req, res) => {
         const transaction = await sequelize.transaction();
         try {
@@ -400,11 +368,6 @@ export const postController = {
         }
     },
 
-    /**
-     * @route DELETE /api/posts/:id
-     * @desc Delete a post by ID
-     * @access Private (Owner or Admin)
-     */
     deletePost: async (req, res) => {
         const transaction = await sequelize.transaction();
         try {
@@ -428,11 +391,6 @@ export const postController = {
         }
     },
 
-    /**
-     * @route POST /api/posts/:id/like
-     * @desc Like a post
-     * @access Private
-     */
     likePost: async (req, res) => {
         const transaction = await sequelize.transaction();
         try {
@@ -461,11 +419,6 @@ export const postController = {
         }
     },
 
-    /**
-     * @route DELETE /api/posts/:id/unlike
-     * @desc Unlike a post
-     * @access Private
-     */
     unlikePost: async (req, res) => {
         const transaction = await sequelize.transaction();
         try {
@@ -491,11 +444,7 @@ export const postController = {
             res.status(500).json({ message: '服务器内部错误', error: error.message });
         }
     },
-    /**
-     * @route GET /api/posts/:id/like/status
-     * @desc Get like status of current user for a post
-     * @access Private
-     */
+
     getLikeStatus: async (req, res) => {
         try {
             const { id: postId } = req.params;
@@ -519,11 +468,7 @@ export const postController = {
             res.status(500).json({ message: '服务器内部错误', error: error.message });
         }
     },
-    /**
-     * @route POST /api/posts/:id/collect
-     * @desc 用户收藏一篇文章
-     * @access Private
-     */
+
     collectPost: async (req, res) => {
         const transaction = await sequelize.transaction();
         try {
@@ -551,11 +496,7 @@ export const postController = {
             res.status(500).json({ message: '服务器内部错误', error: error.message });
         }
     },
-    /**
-     * @route DELETE /api/posts/:id/uncollect
-     * @desc 用户取消收藏一篇文章
-     * @access Private
-     */
+
     uncollectPost: async (req, res) => {
         const transaction = await sequelize.transaction();
         try {
@@ -582,11 +523,7 @@ export const postController = {
             res.status(500).json({ message: '服务器内部错误', error: error.message });
         }
     },
- /**
-   * @route GET /api/posts/collected
-   * @desc 获取当前用户收藏的所有文章
-   * @access Private
-   */
+
   getCollectedPosts: async (req, res) => {
     try {
       const userId = req.user.userId;
@@ -702,11 +639,7 @@ export const postController = {
       });
     }
   },
-  /**
-   * @route GET /api/posts/:id/collect/status
-   * @desc 获取当前用户对某篇文章的收藏状态
-   * @access Private
-   */
+
   getCollectStatus: async (req, res) => {
     try {
       const { id: postId } = req.params;
@@ -716,7 +649,7 @@ export const postController = {
         where: { user_id: userId, post_id: postId }
       });
 
-      // 查询文章本身（获取收藏总数）
+      // 查询文章本身
       const post = await Posts.findByPk(postId);
       if (!post) {
         return res.status(404).json({ message: '文章不存在' });

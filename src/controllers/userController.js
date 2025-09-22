@@ -6,23 +6,12 @@ import { Op } from '../config/Sequelize.js';
 import { getPagination, getPagingData } from '../utils/pagination.js';
 import { getFilter } from "../utils/sensitiveWordFilter.js";
 
-/**
- * 助手函数：检查用户是否为管理员
- * 这是一个简单的检查，但通常应该作为一个中间件来使用
- * @param {object} req - Express 请求对象
- * @returns {boolean}
- */
 const isAdmin = (req) => {
   console.log("test:",req.user);
   return req.user && req.user.is_admin === true;
 };
 
 export const userController = {
-  /**
-   * @route GET /api/users
-   * @desc Get all users with pagination and optional name search
-   * @access Public (or Private if needed)
-   */
   getAllUsers: async (req, res) => {
     try {
       const { page = 0, size = 10, name } = req.query;
@@ -46,11 +35,6 @@ export const userController = {
     }
   },
 
-  /**
-   * @route GET /api/users/all
-   * @desc Get all users without pagination (for admin use)
-   * @access Private (Admin only)
-   */
   getAllUsersNoPaging: async (req, res) => {
     try {
       const { id, name, page, size } = req.query;
@@ -83,11 +67,6 @@ export const userController = {
     }
   },
 
-  /**
-   * @route GET /api/users/:id
-   * @desc Get a user by ID with posts and optionally team info
-   * @access Public
-   */
   getUserById: async (req, res) => {
     try {
       const { id } = req.params;
@@ -138,11 +117,6 @@ export const userController = {
     }
   },
 
-  /**
-   * @route PUT /api/users/:id
-   * @desc Update a user by ID
-   * @access Private (Owner or Admin)
-   */
     updateUser: async (req, res) => {
       try {
         const { id } = req.params;
@@ -206,17 +180,11 @@ export const userController = {
       }
     },
 
-  /**
-   * @route DELETE /api/users/:id
-   * @desc Delete a user by ID
-   * @access Private (Owner or Admin)
-   */
   deleteUser: async (req, res) => {
     try {
       const { id } = req.params;
       const currentUserId = req.user.id;
       
-      // 权限检查：只有管理员或用户本人才能删除
       if (currentUserId !== parseInt(id) && !isAdmin(req)) {
         return res.status(403).json({ message: 'Forbidden: You can only delete your own profile or be an admin.' });
       }
@@ -234,11 +202,6 @@ export const userController = {
     }
   },
 
-  /**
-   * @route POST /api/users/:id/follow
-   * @desc Follow a user
-   * @access Private
-   */
   followUser: async (req, res) => {
     try {
       const followingId = parseInt(req.params.id);
@@ -265,11 +228,6 @@ export const userController = {
     }
   },
 
-  /**
-   * @route DELETE /api/users/:id/unfollow
-   * @desc Unfollow a user
-   * @access Private
-   */
   unfollowUser: async (req, res) => {
     try {
       const followingId = parseInt(req.params.id);
@@ -290,11 +248,6 @@ export const userController = {
     }
   },
 
-  /**
-   * @route GET /api/users/:id/followers
-   * @desc Get followers of a user
-   * @access Public
-   */
   getUserFollowers: async (req, res) => {
     try {
       const { id } = req.params;
@@ -321,11 +274,6 @@ export const userController = {
     }
   },
 
-  /**
-   * @route GET /api/users/:id/following
-   * @desc Get users that the user is following
-   * @access Public
-   */
   getUserFollowing: async (req, res) => {
     try {
       const { id } = req.params;
