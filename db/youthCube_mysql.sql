@@ -11,7 +11,7 @@
  Target Server Version : 80043 (8.0.43-0ubuntu0.24.04.1)
  File Encoding         : 65001
 
- Date: 06/09/2025 19:41:16
+ Date: 23/09/2025 11:58:06
 */
 
 SET NAMES utf8mb4;
@@ -46,7 +46,7 @@ CREATE TABLE `chat_rooms`  (
   PRIMARY KEY (`room_id`) USING BTREE,
   INDEX `team_id`(`team_id` ASC) USING BTREE,
   CONSTRAINT `chat_rooms_ibfk_1` FOREIGN KEY (`team_id`) REFERENCES `teams` (`team_id`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 58 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 59 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Table structure for collections
@@ -62,7 +62,7 @@ CREATE TABLE `collections`  (
   INDEX `fk_collections_post`(`post_id` ASC) USING BTREE,
   CONSTRAINT `fk_collections_post` FOREIGN KEY (`post_id`) REFERENCES `posts` (`post_id`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `fk_collections_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE = InnoDB AUTO_INCREMENT = 19 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 20 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Table structure for comments
@@ -144,7 +144,7 @@ CREATE TABLE `likes`  (
   PRIMARY KEY (`like_id`) USING BTREE,
   UNIQUE INDEX `unique_like`(`user_id` ASC, `target_id` ASC, `target_type` ASC) USING BTREE,
   CONSTRAINT `fk_likes_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE = InnoDB AUTO_INCREMENT = 24 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 25 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Table structure for messages
@@ -163,6 +163,25 @@ CREATE TABLE `messages`  (
   CONSTRAINT `messages_ibfk_1` FOREIGN KEY (`room_id`) REFERENCES `chat_rooms` (`room_id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
   CONSTRAINT `messages_ibfk_2` FOREIGN KEY (`sender_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
 ) ENGINE = InnoDB AUTO_INCREMENT = 93 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Table structure for payment_products
+-- ----------------------------
+DROP TABLE IF EXISTS `payment_products`;
+CREATE TABLE `payment_products`  (
+  `product_id` int NOT NULL AUTO_INCREMENT,
+  `product_name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
+  `product_type` enum('membership','resource_pack','storage_quota','team_size','traffic_boost') CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
+  `description` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL,
+  `price` decimal(10, 2) NOT NULL,
+  `unit` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL,
+  `duration_days` int NULL DEFAULT NULL,
+  `metadata` json NULL,
+  `is_active` tinyint(1) NOT NULL DEFAULT 1,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`product_id`) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 23 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Table structure for post_media
@@ -215,7 +234,7 @@ CREATE TABLE `posts`  (
   PRIMARY KEY (`post_id`) USING BTREE,
   INDEX `user_id`(`user_id` ASC) USING BTREE,
   CONSTRAINT `posts_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 141 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 142 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Table structure for private_chats
@@ -304,7 +323,7 @@ CREATE TABLE `refresh_tokens`  (
   UNIQUE INDEX `refresh_token`(`refresh_token` ASC) USING BTREE,
   INDEX `fk_user_id`(`user_id` ASC) USING BTREE,
   CONSTRAINT `fk_user_id` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 178 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 333 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Table structure for tags
@@ -407,7 +426,7 @@ CREATE TABLE `teams`  (
   INDEX `team_name`(`team_name` ASC) USING BTREE,
   INDEX `idx_parent_team_id`(`parent_team_id` ASC) USING BTREE,
   CONSTRAINT `fk_parent_team_id` FOREIGN KEY (`parent_team_id`) REFERENCES `teams` (`team_id`) ON DELETE SET NULL ON UPDATE CASCADE
-) ENGINE = InnoDB AUTO_INCREMENT = 55 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 56 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Table structure for thought_bullets
@@ -426,6 +445,26 @@ CREATE TABLE `thought_bullets`  (
 ) ENGINE = InnoDB AUTO_INCREMENT = 56 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '想法弹幕表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
+-- Table structure for traffic_boost_records
+-- ----------------------------
+DROP TABLE IF EXISTS `traffic_boost_records`;
+CREATE TABLE `traffic_boost_records`  (
+  `record_id` int NOT NULL AUTO_INCREMENT,
+  `payment_id` int NOT NULL,
+  `post_id` int NOT NULL,
+  `views_consumed` int NOT NULL DEFAULT 0,
+  `cost_amount` decimal(10, 2) NOT NULL,
+  `triggered_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `metadata` json NULL,
+  PRIMARY KEY (`record_id`) USING BTREE,
+  INDEX `idx_payment_id`(`payment_id` ASC) USING BTREE,
+  INDEX `idx_post_id`(`post_id` ASC) USING BTREE,
+  INDEX `idx_triggered_at`(`triggered_at` ASC) USING BTREE,
+  CONSTRAINT `traffic_boost_records_ibfk_1` FOREIGN KEY (`payment_id`) REFERENCES `user_payments` (`payment_id`) ON DELETE CASCADE ON UPDATE RESTRICT,
+  CONSTRAINT `traffic_boost_records_ibfk_2` FOREIGN KEY (`post_id`) REFERENCES `posts` (`post_id`) ON DELETE CASCADE ON UPDATE RESTRICT
+) ENGINE = InnoDB AUTO_INCREMENT = 2 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
+
+-- ----------------------------
 -- Table structure for user_follows
 -- ----------------------------
 DROP TABLE IF EXISTS `user_follows`;
@@ -440,6 +479,68 @@ CREATE TABLE `user_follows`  (
   CONSTRAINT `fk_follower` FOREIGN KEY (`follower_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `fk_following` FOREIGN KEY (`following_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE = InnoDB AUTO_INCREMENT = 12 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Table structure for user_payments
+-- ----------------------------
+DROP TABLE IF EXISTS `user_payments`;
+CREATE TABLE `user_payments`  (
+  `payment_id` int NOT NULL AUTO_INCREMENT,
+  `user_id` int NOT NULL,
+  `product_id` int NOT NULL,
+  `order_no` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
+  `third_party_order_no` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL,
+  `amount` decimal(10, 2) NOT NULL,
+  `currency` char(3) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'CNY',
+  `status` enum('pending','paid','failed','refunded') CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'pending',
+  `paid_at` datetime NULL DEFAULT NULL,
+  `expired_at` datetime NULL DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+  `team_id` int NULL DEFAULT NULL,
+  `post_id` int NULL DEFAULT NULL,
+  PRIMARY KEY (`payment_id`) USING BTREE,
+  UNIQUE INDEX `order_no`(`order_no` ASC) USING BTREE,
+  INDEX `idx_user_id`(`user_id` ASC) USING BTREE,
+  INDEX `idx_product_id`(`product_id` ASC) USING BTREE,
+  INDEX `idx_order_no`(`order_no` ASC) USING BTREE,
+  INDEX `idx_status`(`status` ASC) USING BTREE,
+  INDEX `idx_team_id`(`team_id` ASC) USING BTREE,
+  INDEX `idx_post_id`(`post_id` ASC) USING BTREE,
+  CONSTRAINT `user_payments_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT,
+  CONSTRAINT `user_payments_ibfk_2` FOREIGN KEY (`product_id`) REFERENCES `payment_products` (`product_id`) ON DELETE CASCADE ON UPDATE RESTRICT,
+  CONSTRAINT `user_payments_ibfk_3` FOREIGN KEY (`team_id`) REFERENCES `teams` (`team_id`) ON DELETE SET NULL ON UPDATE RESTRICT,
+  CONSTRAINT `user_payments_ibfk_4` FOREIGN KEY (`post_id`) REFERENCES `posts` (`post_id`) ON DELETE SET NULL ON UPDATE RESTRICT
+) ENGINE = InnoDB AUTO_INCREMENT = 104 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Table structure for user_subscriptions
+-- ----------------------------
+DROP TABLE IF EXISTS `user_subscriptions`;
+CREATE TABLE `user_subscriptions`  (
+  `subscription_id` int NOT NULL AUTO_INCREMENT,
+  `user_id` int NOT NULL,
+  `product_id` int NOT NULL,
+  `payment_id` int NOT NULL,
+  `status` enum('active','expired','cancelled') CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'active',
+  `start_at` datetime NOT NULL,
+  `end_at` datetime NOT NULL,
+  `auto_renew` tinyint(1) NOT NULL DEFAULT 0,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+  `team_id` int NULL DEFAULT NULL,
+  `current_value` json NULL,
+  PRIMARY KEY (`subscription_id`) USING BTREE,
+  INDEX `idx_user_id`(`user_id` ASC) USING BTREE,
+  INDEX `idx_product_id`(`product_id` ASC) USING BTREE,
+  INDEX `idx_payment_id`(`payment_id` ASC) USING BTREE,
+  INDEX `idx_status`(`status` ASC) USING BTREE,
+  INDEX `idx_team_id`(`team_id` ASC) USING BTREE,
+  CONSTRAINT `user_subscriptions_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT,
+  CONSTRAINT `user_subscriptions_ibfk_2` FOREIGN KEY (`product_id`) REFERENCES `payment_products` (`product_id`) ON DELETE CASCADE ON UPDATE RESTRICT,
+  CONSTRAINT `user_subscriptions_ibfk_3` FOREIGN KEY (`payment_id`) REFERENCES `user_payments` (`payment_id`) ON DELETE CASCADE ON UPDATE RESTRICT,
+  CONSTRAINT `user_subscriptions_ibfk_4` FOREIGN KEY (`team_id`) REFERENCES `teams` (`team_id`) ON DELETE SET NULL ON UPDATE RESTRICT
+) ENGINE = InnoDB AUTO_INCREMENT = 104 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Table structure for users
@@ -459,6 +560,7 @@ CREATE TABLE `users`  (
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `is_member` tinyint(1) NULL DEFAULT 0,
+  `is_admin` tinyint(1) NULL DEFAULT 0,
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `email`(`email` ASC) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 13 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = DYNAMIC;

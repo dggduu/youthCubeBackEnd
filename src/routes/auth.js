@@ -1,21 +1,19 @@
 import express from 'express';
-import { rateLimiter } from '../middleware/rateLimiter.js';
 import {
-  emailVerification,
   registerFuc,
   loginFuc,
   refreshTokenFuc,
-  findPassword,
   generateCaptcha,
-  resetPassword
 } from '../controllers/authController.js';
 
 import authMiddleware from "../middleware/authMiddleware.js";
 
+// 因为不可抗力，邮件功能无法使用，改为从客服申请修改密码
+
 const router = express.Router();
 
 // 发送验证码
-router.post('/api/send-verification-code', rateLimiter, emailVerification);
+// router.post('/api/send-verification-code', rateLimiter, emailVerification);
 
 // 注册接口
 router.post('/api/register', registerFuc);
@@ -37,9 +35,8 @@ router.get('/api/auth/status', authMiddleware, async (req, res)=>{
 router.get('/api/captcha-gen', generateCaptcha);
 
 // 发送重置邮箱验证码
-router.post('/api/find-pswd', rateLimiter, findPassword);
+// router.post('/api/find-pswd', rateLimiter, findPassword);
 
 // 重置密码
-router.post('/api/reset-pswd', resetPassword);
 
 export default router;
