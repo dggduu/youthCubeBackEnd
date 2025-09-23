@@ -81,7 +81,7 @@ app.use(express.json());
 app.use(cors({ origin: '*' }));
 app.use(helmet());
 app.use(morgan('dev'));
-app.use(limiter);
+// app.use(limiter);
 
 // 连接数据库
 connectDB();
