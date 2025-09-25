@@ -152,7 +152,7 @@ export const progressController = {
   updateProgress: async (req, res) => {
     try {
       const { id } = req.params;
-      const { title, content, timeline_type, event_time, media_url, media_type } = req.body;
+      const { title, content, timeline_type, event_time, media_url, media_type,status } = req.body;
       const user_id = req.user.userId;
 
       const progress = await getProgressOr404(id, res);
@@ -168,6 +168,7 @@ export const progressController = {
           content,
           timeline_type,
           event_time,
+          status
         }, { transaction });
 
         if (media_url) {

@@ -7,6 +7,7 @@ router.post('/api/teams', authenticateToken, teamController.createTeam);
 router.get('/api/teams', teamController.getAllTeams);
 router.get('/api/teams/nopaging', teamController.getAllTeamsNoPaging);
 router.get('/api/teams/:id', teamController.getTeamById);
+router.get('/api/teams/my',authenticateToken,  teamController.getMyTeam);
 router.put('/api/teams/:id', authenticateToken, teamController.updateTeam);
 router.delete('/api/teams/:id', authenticateToken, teamController.deleteTeam);
 

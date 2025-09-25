@@ -243,6 +243,56 @@ export const teamController = {
   }
   },
 
+  getMyTeam: async (req, res) => {
+    const user_id = req.user.userId;
+
+    try {
+      const user = await User.findOne({
+        where: { id: user_id },
+        attributes: ['id', 'team_id'],
+      });
+
+      if (!user) {
+        return res.status(404).json({ message: '用户不存在' });
+      }
+
+      if (user.team_id === null) {
+        return res.status(200).json({ 
+          message: '您当前未加入任何队伍', 
+          team_info: null 
+        });
+      }
+
+      const team_id = user.team_id;
+
+      const team = await Team.findOne({
+        where: { team_id: team_id },
+        attributes: [
+          'team_id',
+          'team_name',
+          'description',
+          'is_public',
+          'grade',
+          'img_url',
+          'created_at',
+          'updated_at'
+        ]
+      });
+
+      if (!team) {
+        return res.status(404).json({ message: '队伍不存在或已解散' });
+      }
+
+      return res.status(200).json({ 
+        message: '成功获取您的队伍信息', 
+        team_info: team.toJSON() 
+      });
+
+    } catch (error) {
+      handleError(res, error, '获取队伍信息时遇到问题');
+    }
+  },
+
   getTeamById: async (req, res) => {
     try {
       const { id } = req.params;
